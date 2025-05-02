@@ -1,0 +1,41 @@
+name: Install Dependencies with CUDA PyTorch
+
+on:
+  push:
+    branches: 
+    - main
+    - develop
+
+jobs:
+  install:
+    runs-on: ubuntu-latest # Use standard GitHub runners
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive' # Important: Fetches the submodule(s)
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Choose your desired Python version
+
+    - name: Upgrade pip
+      run: python -m pip install --upgrade pip
+
+    - name: Install PyTorch for CUDA 12.6
+      run: |
+        pip install \
+          --extra-index-url https://download.pytorch.org/whl/cu126 \
+          torch torchvision torchaudio
+
+    - name: Install dependencies from requirements files
+      # Assumes main repo has requirements.txt and submodule is in Music-Source-Separation-Training/
+      # Adjust paths if necessary.
+      run: |
+        pip install \
+          -r requirements.txt \
+          -r Music-Source-Separation-Training/requirements.txt
+
+    # No further steps defined as per your request

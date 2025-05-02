@@ -1,0 +1,3 @@
+[submodule "Music-Source-Separation-Training"]
+	path = Music-Source-Separation-Training
+	url = https://github.com/ZFTurbo/Music-Source-Separation-Training.git
