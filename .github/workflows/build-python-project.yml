@@ -18,9 +18,26 @@ jobs:
         submodules: 'recursive' # Important: Fetches the submodule(s)
 
     - name: Set up Python
+      id: setup-python # Give the step an ID to reference its outputs
       uses: actions/setup-python@v5
       with:
         python-version: '3.11' # Choose your desired Python version
+
+    - name: Get pip cache dir
+      id: pip-cache # Give the step an ID
+      run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }} # Use the dynamic cache path
+        key: ${{ runner.os }}-pip-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('.github/workflows/build-python-project.yml') }} # Key includes OS, Python version, requirements files, and the workflow file itself (to bust cache if install commands change)
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ steps.setup-python.outputs.python-version }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev portaudio19-dev
 
     - name: Upgrade pip
       run: python -m pip install --upgrade pip
@@ -32,6 +49,7 @@ jobs:
           torch torchvision torchaudio
 
     - name: Install dependencies from requirements files
+      # This step will also use the cache if available.
       # Assumes main repo has requirements.txt and submodule is in Music-Source-Separation-Training/
       # Adjust paths if necessary.
       run: |
