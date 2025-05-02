@@ -37,7 +37,7 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev portaudio19-dev
+      run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
 
     - name: Upgrade pip
       run: python -m pip install --upgrade pip
@@ -48,13 +48,17 @@ jobs:
           --extra-index-url https://download.pytorch.org/whl/cu126 \
           torch torchvision torchaudio
 
+    - name: Filter submodule requirements to exclude wxpython
+      run: grep -v '^wxpython==' Music-Source-Separation-Training/requirements.txt > filtered_submodule_reqs.txt
+
     - name: Install dependencies from requirements files
       # This step will also use the cache if available.
       # Assumes main repo has requirements.txt and submodule is in Music-Source-Separation-Training/
       # Adjust paths if necessary.
+      # Install main requirements and filtered submodule requirements
       run: |
         pip install \
           -r requirements.txt \
-          -r Music-Source-Separation-Training/requirements.txt
+          -r filtered_submodule_reqs.txt # Use the filtered file
 
     # No further steps defined as per your request
