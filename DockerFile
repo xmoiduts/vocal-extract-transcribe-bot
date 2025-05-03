@@ -82,7 +82,7 @@ RUN mkdir -p $LOCAL_INPUT_DIR $LOCAL_OUTPUT_DIR
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Set the working directory for the inference script
+# Set the working directory for the inference script 
 WORKDIR /app/Music-Source-Separation-Training
 
 # Run the entrypoint script when the container starts
