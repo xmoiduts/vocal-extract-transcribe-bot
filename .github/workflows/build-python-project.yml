@@ -67,3 +67,14 @@ jobs:
         mkdir -p ./models
         curl -L -o ./models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml
         curl -L -o ./models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
+
+    - name: Test run the code
+      run: |
+        cd Music-Source-Separation-Training/
+        python inference.py \
+            --model_type bs_roformer \
+            --config_path ../models/model_bs_roformer_ep_368_sdr_12.9628.yaml \
+            --start_check_point ../models/model_bs_roformer_ep_368_sdr_12.9628.ckpt \
+            --input_folder ../input-sounds/ \
+            --store_dir ../output-sounds/
+        ls -lah ../output-sounds/
