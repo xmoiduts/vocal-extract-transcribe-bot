@@ -61,4 +61,9 @@ jobs:
           -r requirements.txt \
           -r filtered_submodule_reqs.txt # Use the filtered file
 
-    # No further steps defined as per your request
+    - name: Download model files
+      run: |
+        # bs_roformer | Vocals BS-Roformer_1296 (by viperx)
+        mkdir -p ./models
+        curl -L -o ./models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml
+        curl -L -o ./models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
