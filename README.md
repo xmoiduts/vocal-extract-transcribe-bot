@@ -3,6 +3,7 @@ extract vocal stem of musics then transcribe and format with external big model 
 
 # Speed Estimation of Seperation
 - GitHub Actions CPU Runner
-    - runs-on: ubuntu-latest
+    - Azure 4C16G?
+    - `runs-on: ubuntu-latest`
     - [1/30]x
     - 10s music takes 300s to seperate.
