@@ -10,10 +10,12 @@ FROM nvidia/cuda:12.6.3-runtime-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
-# TODO: split build-essential into elsewhere, it build pyaudio but takes space.
+# TODO: split build-essential and python3.11-dev into elsewhere,
+#       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
+    python3.11-dev \
     python3.11 \
     python3-pip \
     python3.11-venv \
