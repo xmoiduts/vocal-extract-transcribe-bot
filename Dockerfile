@@ -23,8 +23,6 @@ RUN apt-get update && \
     curl \
     portaudio19-dev \
     ca-certificates \
-    # awscli is needed for the entrypoint script to interact with S3
-    awscli \
     grep && \
     # Make python3.11 the default python3 and pip3
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
