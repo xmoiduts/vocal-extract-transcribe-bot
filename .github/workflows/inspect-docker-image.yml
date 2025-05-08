@@ -70,10 +70,10 @@ jobs:
         
         echo "## Layer details with commands and sizes" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        docker history --human --format "{{.CreatedBy}}\t{{.Size}}" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} >> $GITHUB_STEP_SUMMARY
+        docker history --human --no-trunc --format "{{.CreatedBy}}\t{{.Size}}" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         
         echo "## Detailed layer history" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        docker history --human ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} >> $GITHUB_STEP_SUMMARY
+        docker history --human --no-trunc ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY 
