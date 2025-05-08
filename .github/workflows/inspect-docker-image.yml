@@ -17,7 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  EXAMPLE_REF: 'cicd/add-GHA' # Example branch hardcoded for push events
+  EXAMPLE_REF: 'cicd-add-GHA' # Example branch hardcoded for push events
 
 jobs:
   inspect-image:
