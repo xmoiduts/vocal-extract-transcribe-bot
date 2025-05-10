@@ -25,7 +25,7 @@ COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and de-duplicate requirements for wheel building
-RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt
+RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
 RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu126 index.
