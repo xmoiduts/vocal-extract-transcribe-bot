@@ -25,6 +25,28 @@ jobs:
       with:
         submodules: 'recursive' # Ensure submodule code is available for the build context
 
+    - name: Free Up Disk Space on Runner
+      run: |
+        echo "Initial disk space:"
+        df -h
+        echo "Removing .NET SDKs..."
+        sudo rm -rf /usr/share/dotnet
+        echo "Removing Haskell (ghc)..."
+        sudo rm -rf /opt/ghc
+        echo "Removing Boost libraries..."
+        sudo rm -rf "/usr/local/share/boost"
+        echo "Removing Android NDK, SDK, and platform-tools..."
+        sudo rm -rf /usr/local/lib/android
+        echo "Removing CodeQL bundles..."
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        echo "Removing pre-installed tool cache ($AGENT_TOOLSDIRECTORY)..."
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        echo "Cleaning apt caches..."
+        sudo apt-get clean -y
+        echo "Disk space after cleanup:"
+        df -h
+      shell: bash
+
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -63,7 +85,7 @@ jobs:
         cache-from: type=gha # Enable pulling cache from GHA
         cache-to: type=gha,mode=max # Enable pushing cache to GHA (mode=max for better caching)
 
-    - name: Get current disk usage
+    - name: Get current disk usage after build
       run: df -h
 
     # - name: Get primary tag for inspection
