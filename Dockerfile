@@ -26,7 +26,9 @@ RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_re
 
 # Combine and de-duplicate requirements for wheel building
 RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
-RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels
+RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels && \
+    echo "Pip cache cleanup: Removing /root/.cache/pip" && \
+    rm -rf /root/.cache/pip
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu126 index.
 # Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
