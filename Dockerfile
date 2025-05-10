@@ -1,32 +1,34 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
+# --------- STAGE: BUILD PYAUDIO ---------
+
+
+
+
+
+
+
+
 # Choose a base image with CUDA runtime compatible with PyTorch's cu126 index.
 # Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.6.3) and PyTorch index (e.g., cu126)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.6.3-runtime-ubuntu22.04
+FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
-
+RUN python3 --version && pip3 --version
 # Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
 # TODO: split build-essential and python3.11-dev into elsewhere,
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
-    python3.11-dev \
-    python3.11 \
-    python3-pip \
-    python3.11-venv \
     git \
     curl \
     portaudio19-dev \
     ca-certificates \
     grep && \
-    # Make python3.11 the default python3 and pip3
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    update-alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip 1 && \
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
 
@@ -37,7 +39,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip
 # The workflow specified cu126, which might be a typo or specific URL.
 # Using cu126 here, assuming CUDA 12.6 compatibility. Verify the correct URL for your target environment.
 # Check https://pytorch.org/get-started/locally/
-RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu126 torch torchvision torchaudio
+# RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu126 torch torchvision torchaudio
 
 # Set the main working directory
 WORKDIR /app
