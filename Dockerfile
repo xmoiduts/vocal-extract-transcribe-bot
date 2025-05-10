@@ -1,0 +1,91 @@
+# Dockerfile for Music Source Separation Training (MSST)
+
+# Choose a base image with CUDA runtime compatible with PyTorch's cu126 index.
+# Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
+# Adjust the CUDA version (e.g., 12.6.3) and PyTorch index (e.g., cu126)
+# if your target Fargate instances use a different CUDA version.
+FROM nvidia/cuda:12.6.3-runtime-ubuntu22.04
+
+# Avoid prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
+# TODO: split build-essential and python3.11-dev into elsewhere,
+#       it build pyaudio but takes space.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    python3.11-dev \
+    python3.11 \
+    python3-pip \
+    python3.11-venv \
+    git \
+    curl \
+    portaudio19-dev \
+    ca-certificates \
+    grep && \
+    # Make python3.11 the default python3 and pip3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/pip3 pip3 /usr/bin/pip 1 && \
+    # Clean up apt cache
+    rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN python3 -m pip install --no-cache-dir --upgrade pip
+
+# Install PyTorch with CUDA support.
+# The workflow specified cu126, which might be a typo or specific URL.
+# Using cu126 here, assuming CUDA 12.6 compatibility. Verify the correct URL for your target environment.
+# Check https://pytorch.org/get-started/locally/
+RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu126 torch torchvision torchaudio
+
+# Set the main working directory
+WORKDIR /app
+
+# Copy requirements files first to leverage Docker layer caching.
+# Assumes this Dockerfile is at the repo root, and the submodule is checked out.
+COPY requirements.txt ./
+# Copy submodule requirements to a known location
+COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
+
+# Filter out wxpython from submodule requirements as done in the workflow
+RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+
+# Install Python dependencies from the main requirements and the filtered submodule requirements
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r filtered_submodule_reqs.txt
+
+# Copy the rest of the application code, including the submodule contents
+COPY . /app
+
+# Download and place the models into a specific directory within the image.
+# This increases image size but makes runtime faster.
+# Alternatively, download them from S3 in the entrypoint script.
+RUN mkdir -p /app/models
+RUN curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
+
+# Define default paths and model type using environment variables.
+# These can be overridden by the Fargate Task Definition environment settings.
+ENV MODEL_TYPE="bs_roformer"
+ENV CONFIG_PATH="/app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml"
+ENV CHECKPOINT_PATH="/app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt"
+# These INPUT/OUTPUT dirs are local paths within the container
+ENV LOCAL_INPUT_DIR="/app/input"
+ENV LOCAL_OUTPUT_DIR="/app/output"
+# These S3 paths will be provided by the Lambda function triggering the task
+ENV INPUT_S3_PREFIX=""
+ENV OUTPUT_S3_PREFIX=""
+
+# Create local directories for input/output processing
+RUN mkdir -p $LOCAL_INPUT_DIR $LOCAL_OUTPUT_DIR
+
+# Add an entrypoint script responsible for S3 sync and running the inference
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Set the working directory for the inference script 
+WORKDIR /app/Music-Source-Separation-Training
+
+# Run the entrypoint script when the container starts
+ENTRYPOINT ["/app/entrypoint.sh"]
