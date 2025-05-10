@@ -68,11 +68,10 @@ jobs:
         docker image ls ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         
-        
+
         echo "## Layer details with commands and sizes" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "COMMAND | SIZE" >> $GITHUB_STEP_SUMMARY
-        echo "--- | ---" >> $GITHUB_STEP_SUMMARY
+        echo "| SIZE | COMMAND |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|---------|" >> $GITHUB_STEP_SUMMARY
         
         # Process the output to make long commands wrap better in markdown table
         docker history --no-trunc --format "{{.CreatedBy}}|{{.Size}}" \
@@ -85,7 +84,7 @@ jobs:
           # Insert line breaks for long commands (at pipe character)
           gsub(/\|/, " \\\n| ", cmd);
           # Print the formatted result
-          print cmd " | " size
+          print "|" size " | " cmd "|"
         }' >> $GITHUB_STEP_SUMMARY
         
         echo "## Detailed layer history" >> $GITHUB_STEP_SUMMARY
