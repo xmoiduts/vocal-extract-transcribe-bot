@@ -1,26 +1,32 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
-# --------- STAGE: BUILD PYAUDIO ---------
-FROM python:3.11-slim AS builder_pyaudio
+# --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
+FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b as builder_submodule_wheels
 
-# Install PyAudio build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
+    git \
+    curl \
     portaudio19-dev \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    grep && \
+    # Clean up apt cache
+    rm -rf /var/lib/apt/lists/*
 
-# Install wheel package (to build .whl files)
 RUN pip install wheel
+WORKDIR /app_build
 
-WORKDIR /wheels
-# Build PyAudio wheel. This will fetch the latest compatible PyAudio.
-# If you need a specific version, specify it e.g., "PyAudio==0.2.13"
-RUN pip wheel --no-cache-dir PyAudio -w .
+# Copy requirements files
+COPY requirements.txt ./main_requirements.txt
+COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
+# Filter out wxpython from submodule requirements
+RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
-
-
-
-
+# Combine and de-duplicate requirements for wheel building
+RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt
+RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu126 index.
 # Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
@@ -36,9 +42,8 @@ RUN python3 --version && pip3 --version
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
     curl \
+    # Contains .so libraries for pyaudio
     portaudio19-dev \
     ca-certificates \
     grep && \
@@ -52,23 +57,13 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip
 # Set the main working directory
 WORKDIR /app
 
-# Copy requirements files first to leverage Docker layer caching.
-# Assumes this Dockerfile is at the repo root, and the submodule is checked out.
-COPY requirements.txt ./
-# Copy submodule requirements to a known location
-COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
+# python dependencies
+COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
 
-# Filter out wxpython from submodule requirements as done in the workflow
-RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
-
-# Copy PyAudio wheel from the builder stage
-COPY --from=builder_pyaudio /wheels/pyaudio*.whl /tmp/
-# Install the PyAudio wheel using the base image's python3 and pip
-RUN python3 -m pip install --no-cache-dir /tmp/pyaudio*.whl && \
-    rm /tmp/pyaudio*.whl
-# Install Python dependencies from the main requirements and the filtered submodule requirements
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
-RUN python3 -m pip install --no-cache-dir -r filtered_submodule_reqs.txt
+COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
+RUN \
+    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt && \
+    rm -rf /tmp/all_wheels
 
 # Copy the rest of the application code, including the submodule contents
 COPY . /app
