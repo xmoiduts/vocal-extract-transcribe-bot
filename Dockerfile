@@ -36,6 +36,7 @@ RUN python3 --version && pip3 --version
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    build-essential \
     git \
     curl \
     portaudio19-dev \
