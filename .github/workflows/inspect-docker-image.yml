@@ -8,11 +8,11 @@ on:
         required: true
         type: string
         default: 'latest'
-  push:
-    branches:
-      - main
-      - develop
-      - cicd/*
+  # push:
+  #   branches:
+  #     - main
+  #     - develop
+  #     - cicd/*
 
 env:
   REGISTRY: ghcr.io

@@ -63,6 +63,49 @@ jobs:
         cache-from: type=gha # Enable pulling cache from GHA
         cache-to: type=gha,mode=max # Enable pushing cache to GHA (mode=max for better caching)
 
+    # Inspect the built Docker image and display layer information
+    - name: Get primary tag for inspection
+      id: primary-tag
+      run: |
+        PRIMARY_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+        echo "primary_tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
+        
+    - name: Display image details
+      run: |
+        echo "## Full image information" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        docker image ls ${{ steps.primary-tag.outputs.primary_tag }} >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        
+    - name: Display layer details with commands and sizes
+      run: |
+        echo "## Layer details with commands and sizes" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "COMMAND | SIZE" >> $GITHUB_STEP_SUMMARY
+        echo "--- | ---" >> $GITHUB_STEP_SUMMARY
+        
+        # Process the output to make long commands wrap better in markdown table
+        docker history --no-trunc --format "{{.CreatedBy}}|{{.Size}}" ${{ steps.primary-tag.outputs.primary_tag }} | \
+        awk -F'|' '{
+          cmd = $1;
+          size = $2;
+          # Replace spaces with non-breaking spaces in the command
+          gsub(/ /, " ", cmd);
+          # Insert line breaks for long commands (at pipe character)
+          gsub(/\|/, " \\\n| ", cmd);
+          # Print the formatted result
+          print cmd " | " size
+        }' >> $GITHUB_STEP_SUMMARY
+        
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        
+    - name: Display detailed layer history
+      run: |
+        echo "## Detailed layer history" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        docker history --human --no-trunc ${{ steps.primary-tag.outputs.primary_tag }} >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
     # Optional: You might add a step here to trigger a deployment
     # or notify that a new image is available.
     # The 'Test run the code' step from the old workflow is removed,
