@@ -61,10 +61,10 @@ COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Copy PyAudio wheel from the builder stage
-COPY --from=builder_pyaudio /wheels/PyAudio*.whl /tmp/
+COPY --from=builder_pyaudio /wheels/pyaudio*.whl /tmp/
 # Install the PyAudio wheel using the base image's python3 and pip
-RUN python3 -m pip install --no-cache-dir /tmp/PyAudio*.whl && \
-    rm /tmp/PyAudio*.whl
+RUN python3 -m pip install --no-cache-dir /tmp/pyaudio*.whl && \
+    rm /tmp/pyaudio*.whl
 # Install Python dependencies from the main requirements and the filtered submodule requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 RUN python3 -m pip install --no-cache-dir -r filtered_submodule_reqs.txt
