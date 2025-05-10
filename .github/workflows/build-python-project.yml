@@ -67,6 +67,8 @@ jobs:
     - name: Capture Docker image ID
       id: image-id
       run: |
+        set -x
+        docker images --format "{{.ID}}"
         # 获取最新构建的镜像ID (可能是没有registry前缀的)
         IMAGE_ID=$(docker images --format "{{.ID}}" --filter "reference=${{ env.IMAGE_NAME }}*" | head -n 1)
         # 如果没找到，尝试查找所有最近创建的镜像
