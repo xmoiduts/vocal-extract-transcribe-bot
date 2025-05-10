@@ -1,8 +1,21 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYAUDIO ---------
+FROM python:3.11-slim AS builder_pyaudio
 
+# Install PyAudio build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    portaudio19-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install wheel package (to build .whl files)
+RUN pip install wheel
+
+WORKDIR /wheels
+# Build PyAudio wheel. This will fetch the latest compatible PyAudio.
+# If you need a specific version, specify it e.g., "PyAudio==0.2.13"
+RUN pip wheel --no-cache-dir PyAudio -w .
 
 
 
@@ -23,7 +36,6 @@ RUN python3 --version && pip3 --version
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential \
     git \
     curl \
     portaudio19-dev \
@@ -35,11 +47,6 @@ RUN apt-get update && \
 # Upgrade pip
 RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-# Install PyTorch with CUDA support.
-# The workflow specified cu126, which might be a typo or specific URL.
-# Using cu126 here, assuming CUDA 12.6 compatibility. Verify the correct URL for your target environment.
-# Check https://pytorch.org/get-started/locally/
-# RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu126 torch torchvision torchaudio
 
 # Set the main working directory
 WORKDIR /app
@@ -53,6 +60,11 @@ COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.
 # Filter out wxpython from submodule requirements as done in the workflow
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
+# Copy PyAudio wheel from the builder stage
+COPY --from=builder_pyaudio /wheels/PyAudio*.whl /tmp/
+# Install the PyAudio wheel using the base image's python3 and pip
+RUN python3 -m pip install --no-cache-dir /tmp/PyAudio*.whl && \
+    rm /tmp/PyAudio*.whl
 # Install Python dependencies from the main requirements and the filtered submodule requirements
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 RUN python3 -m pip install --no-cache-dir -r filtered_submodule_reqs.txt

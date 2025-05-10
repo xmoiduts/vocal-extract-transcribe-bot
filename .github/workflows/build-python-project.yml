@@ -63,6 +63,9 @@ jobs:
         cache-from: type=gha # Enable pulling cache from GHA
         cache-to: type=gha,mode=max # Enable pushing cache to GHA (mode=max for better caching)
 
+    - name: Get current disk usage
+      run: df -h
+
     # - name: Get primary tag for inspection
     #   id: primary-tag
     #   run: |
