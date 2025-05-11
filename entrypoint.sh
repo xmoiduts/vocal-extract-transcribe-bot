@@ -31,9 +31,17 @@ python3 inference.py \
     --config_path "${CONFIG_PATH}" \
     --start_check_point "${CHECKPOINT_PATH}" \
     --input_folder "${LOCAL_INPUT_DIR}" \
-    --store_dir "${LOCAL_OUTPUT_DIR}"
+    --store_dir "${LOCAL_OUTPUT_DIR}" > "${LOCAL_OUTPUT_DIR}/inference_run.log" 2>&1
+
 
 echo "Inference complete."
+
+echo "Displaying contents of inference_run.log with CR replaced by NL:"
+if [ -f "${LOCAL_OUTPUT_DIR}/inference_run.log" ]; then
+    sed 's/\r/\n/g' "${LOCAL_OUTPUT_DIR}/inference_run.log"
+else
+    echo "Log file ${LOCAL_OUTPUT_DIR}/inference_run.log not found."
+fi
 
 # Sync results from the local output directory back to S3
 echo "Uploading results to ${OUTPUT_S3_PREFIX}..."

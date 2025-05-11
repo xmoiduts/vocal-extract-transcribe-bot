@@ -44,11 +44,18 @@ RUN python3 --version && pip3 --version
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl \
-    # Contains .so libraries for pyaudio
-    portaudio19-dev \
-    ca-certificates \
-    grep && \
+    # Runtime libraries for pyaudio
+    libportaudio2 \
+    # Needed for HTTPS connections (e.g. by curl)
+    ca-certificates && \
+    # Temporarily install curl to download models, then remove it.
+    # Also, download models in this same layer to avoid leaving curl installed.
+    apt-get install -y --no-install-recommends curl && \
+    mkdir -p /app/models && \
+    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt && \
+    apt-get purge -y --auto-remove curl && \
+    apt-get clean && \
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
 
@@ -73,9 +80,10 @@ COPY . /app
 # Download and place the models into a specific directory within the image.
 # This increases image size but makes runtime faster.
 # Alternatively, download them from S3 in the entrypoint script.
-RUN mkdir -p /app/models
-RUN curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
-    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
+# Model download is now part of the apt-get install layer to optimize curl usage.
+# RUN mkdir -p /app/models
+# RUN curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+#     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
 
 # Define default paths and model type using environment variables.
 # These can be overridden by the Fargate Task Definition environment settings.
