@@ -105,5 +105,6 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 - The 3-min test mp3's are 128kbps 44100Hz.
 - EC2 boot time is defined as the time offset between instance launch time and job start time.
 - The upper table is tested under a 10GB docker storaged on Github Packages then pulls to AWS.
+- Audio is 44100it/s; 48khz audio on AWS GPU will crash but works on Asus G14.
 - Asus ROG G14 runs at 96000it/s under windows performance mode and 100000it/s under windows power efficiency mode.
     - Possibly because efficiency mode restricts CPU Energy Performance Preference (EPP), resulting in reduced frequency and power consumption, allowing more power allocation to the GPU.

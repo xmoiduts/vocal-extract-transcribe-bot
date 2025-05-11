@@ -62,8 +62,8 @@ WORKDIR /app
 # python dependencies
 COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
 
-COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
-RUN \
+#COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
+RUN --mount=type=bind, from=builder_submodule_wheels, source=/all_wheels, target=/tmp/all_wheels \
     python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt && \
     rm -rf /tmp/all_wheels
 

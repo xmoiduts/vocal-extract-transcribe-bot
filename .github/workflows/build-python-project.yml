@@ -35,11 +35,11 @@ jobs:
         sudo rm -rf /opt/ghc
         echo "Removing Boost libraries..."
         sudo rm -rf "/usr/local/share/boost"
-        echo "Removing Android NDK, SDK, and platform-tools..."
+        echo "Removing Android NDK, SDK, and platform-tools..." # big
         sudo rm -rf /usr/local/lib/android
         echo "Removing CodeQL bundles..."
         sudo rm -rf /opt/hostedtoolcache/CodeQL
-        echo "Removing pre-installed tool cache ($AGENT_TOOLSDIRECTORY)..."
+        echo "Removing pre-installed tool cache ($AGENT_TOOLSDIRECTORY)..." # big
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         echo "Cleaning apt caches..."
         sudo apt-get clean -y
