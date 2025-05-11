@@ -24,26 +24,29 @@ if [ -z "$(ls -A ${LOCAL_INPUT_DIR})" ]; then
 fi
 
 echo "Running inference..."
-# Call the inference script using the environment variables for configuration
-# Assumes the script is in the WORKDIR set in the Dockerfile
-python3 inference.py \
+# Call the inference script using the environment variables for configuration.
+# -u: force unbuffered binary stdout and stderr
+# 2>&1: redirect stderr of python script to its stdout
+# The pipe sends this combined stream to tee.
+# tee does two things:
+#   1. Writes the raw stream to "${LOCAL_OUTPUT_DIR}/inference_run.log"
+#   2. Writes the raw stream to the process substitution >(tr '\r' '\n')
+#      The process substitution runs 'tr', which converts '\r' to '\n'.
+#      The output of 'tr' (processed stream) goes to the main stdout of this pipeline,
+#      which is then captured by CloudWatch.
+
+python3 -u inference.py \
     --model_type "${MODEL_TYPE}" \
     --config_path "${CONFIG_PATH}" \
     --start_check_point "${CHECKPOINT_PATH}" \
     --input_folder "${LOCAL_INPUT_DIR}" \
-    --store_dir "${LOCAL_OUTPUT_DIR}" > "${LOCAL_OUTPUT_DIR}/inference_run.log" 2>&1
+    --store_dir "${LOCAL_OUTPUT_DIR}" \
+    2>&1 | tee "${LOCAL_OUTPUT_DIR}/inference_run.log" >(tr '\r' '\n')
 
-
-echo "Inference complete."
-
-echo "Displaying contents of inference_run.log with CR replaced by NL:"
-if [ -f "${LOCAL_OUTPUT_DIR}/inference_run.log" ]; then
-    sed 's/\r/\n/g' "${LOCAL_OUTPUT_DIR}/inference_run.log"
-else
-    echo "Log file ${LOCAL_OUTPUT_DIR}/inference_run.log not found."
-fi
+echo "Inference complete." # This will appear in CloudWatch after python script finishes.
 
 # Sync results from the local output directory back to S3
+# This will include the raw inference_run.log file
 echo "Uploading results to ${OUTPUT_S3_PREFIX}..."
 aws s3 sync "${LOCAL_OUTPUT_DIR}" "${OUTPUT_S3_PREFIX}"
 
