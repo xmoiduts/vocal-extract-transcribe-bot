@@ -65,8 +65,7 @@ COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
 #COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
 # use mount to avoid copying the large all_wheels directory (3.41GB) which cannot be later deleted.
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/tmp/all_wheels \
-    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt && \
-    rm -rf /tmp/all_wheels
+    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt
 
 # Copy the rest of the application code, including the submodule contents
 COPY . /app
