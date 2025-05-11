@@ -1,7 +1,8 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b AS builder_submodule_wheels
+# FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b AS builder_submodule_wheels
+FROM nvidia/cuda:12.8.1-base-ubuntu22.04 AS builder_submodule_wheels
 
 
 RUN apt-get update && \
@@ -11,7 +12,11 @@ RUN apt-get update && \
     curl \
     portaudio19-dev \
     ca-certificates \
-    grep && \
+    grep \
+    # Add Python for the builder stage
+    python3.11 \
+    python3.11-pip \
+    python3.11-dev && \
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
 
@@ -34,10 +39,21 @@ RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_w
 # Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.6.3) and PyTorch index (e.g., cu126)
 # if your target Fargate instances use a different CUDA version.
-FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b
+FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python for the final stage
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-pip \
+    # python3-dev might not be strictly needed in final if all wheels are built,
+    # but can be kept if some direct pip installs might compile
+    python3.11-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN python3 --version && pip3 --version
 # Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
 # TODO: split build-essential and python3.11-dev into elsewhere,
@@ -62,7 +78,7 @@ RUN apt-get update && \
 # Upgrade pip
 RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-
+RUN pip3 install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu128 torch torchvision torchaudio
 # Set the main working directory
 WORKDIR /app
 
