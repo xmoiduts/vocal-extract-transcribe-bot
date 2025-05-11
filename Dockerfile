@@ -1,7 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b as builder_submodule_wheels
+FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b AS builder_submodule_wheels
 
 
 RUN apt-get update && \
@@ -63,7 +63,8 @@ WORKDIR /app
 COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
 
 #COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
-RUN --mount=type=bind, from=builder_submodule_wheels, source=/all_wheels, target=/tmp/all_wheels \
+# use mount to avoid copying the large all_wheels directory (3.41GB) which cannot be later deleted.
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/tmp/all_wheels \
     python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt && \
     rm -rf /tmp/all_wheels
 
