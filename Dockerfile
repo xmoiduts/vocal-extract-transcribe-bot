@@ -15,7 +15,7 @@ RUN apt-get update && \
     grep \
     # Add Python for the builder stage
     python3.11 \
-    python3.11-pip \
+    python3-pip \
     python3.11-dev && \
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
@@ -48,10 +48,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3.11 \
-    python3.11-pip \
+    python3-pip && \
     # python3-dev might not be strictly needed in final if all wheels are built,
     # but can be kept if some direct pip installs might compile
-    python3.11-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN python3 --version && pip3 --version
