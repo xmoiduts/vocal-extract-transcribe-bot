@@ -1,9 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-# FROM pytorch/pytorch:2.7.0-cuda12.6-cudnn9-runtime@sha256:27c3135420bc184e86977170b6158c6133be3c7cc5c35e9e4fa87bdda629dc2b AS builder_submodule_wheels
 FROM nvidia/cuda:12.8.1-base-ubuntu22.04 AS builder_submodule_wheels
-
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -14,13 +12,21 @@ RUN apt-get update && \
     ca-certificates \
     grep \
     # Add Python for the builder stage
-    python3.11 \
-    python3-pip \
-    python3.11-dev && \
+    python3.11 \ 
+    # python3.11-dev should bring python3.11-pip or ensure pip works for 3.11
+    python3.11-dev \
+    # General pip3, to be sure
+    python3-pip && \ 
+    # Make python3.11 the default python3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    # Ensure pip is linked to the new default python3
+    # This is often handled by python3-pip installation and update-alternatives for python3
+    # Or by directly using python3 -m pip
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install wheel
+# Now python3 should be python3.11. Use it to upgrade pip and install wheel.
+RUN python3 -m pip install --upgrade pip wheel
 WORKDIR /app_build
 
 # Copy requirements files
@@ -31,6 +37,8 @@ RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_re
 
 # Combine and de-duplicate requirements for wheel building
 RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
+
+# Explicitly use python3 (which now should be python3.11) for building wheels
 RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels && \
     echo "Pip cache cleanup: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
@@ -49,11 +57,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3.11 \
     python3-pip && \
-    # python3-dev might not be strictly needed in final if all wheels are built,
-    # but can be kept if some direct pip installs might compile
+    # Make python3.11 the default python3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python3 --version && pip3 --version
+RUN python3 --version && python3 -m pip --version
 # Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
 # TODO: split build-essential and python3.11-dev into elsewhere,
 #       it build pyaudio but takes space.
@@ -77,7 +85,7 @@ RUN apt-get update && \
 # Upgrade pip
 RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-RUN pip3 install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu128 torch torchvision torchaudio
+RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu128 torch torchvision torchaudio
 # Set the main working directory
 WORKDIR /app
 
