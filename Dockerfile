@@ -1,7 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.8.1-base-ubuntu22.04 AS builder_submodule_wheels
+FROM nvidia/cuda:11.8.0-base-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -12,13 +12,13 @@ RUN apt-get update && \
     ca-certificates \
     grep \
     # Add Python for the builder stage
-    python3.11 \ 
-    # python3.11-dev should bring python3.11-pip or ensure pip works for 3.11
-    python3.11-dev \
+    python3.10 \ 
+    # python3.10-dev should bring python3.11-pip or ensure pip works for 3.11
+    python3.10-dev \
     # General pip3, to be sure
     python3-pip && \ 
-    # Make python3.11 the default python3
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    # Make python3.10 the default python3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     # Ensure pip is linked to the new default python3
     # This is often handled by python3-pip installation and update-alternatives for python3
     # Or by directly using python3 -m pip
@@ -47,7 +47,7 @@ RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_w
 # Using CUDA 12.6.3 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.6.3) and PyTorch index (e.g., cu126)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.8.1-base-ubuntu22.04
+FROM nvidia/cuda:11.8.0-base-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -55,15 +55,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install Python for the final stage
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3.11 \
+    python3.10 \
     python3-pip && \
-    # Make python3.11 the default python3
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    # Make python3.10 the default python3
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     rm -rf /var/lib/apt/lists/*
 
 RUN python3 --version && python3 -m pip --version
-# Install essential system packages, Python 3.11, pip, git, curl, MSST system dependencies, AND build tools
-# TODO: split build-essential and python3.11-dev into elsewhere,
+# Install essential system packages, Python 3.10, pip, git, curl, MSST system dependencies, AND build tools
+# TODO: split build-essential and python3.10-dev into elsewhere,
 #       it build pyaudio but takes space.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
