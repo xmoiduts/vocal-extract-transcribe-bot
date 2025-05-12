@@ -38,8 +38,6 @@ RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_re
 # Combine and de-duplicate requirements for wheel building
 RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
 
-RUN python3 -m pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu118 torch torchvision torchaudio
-
 # Explicitly use python3 (which now should be python3.11) for building wheels
 RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels && \
     echo "Pip cache cleanup: Removing /root/.cache/pip" && \
