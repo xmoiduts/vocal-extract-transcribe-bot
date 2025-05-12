@@ -14,7 +14,7 @@ env:
   # --- AWS ECR Configuration ---
   AWS_REGION: ${{ secrets.AWS_REGION }}
   # TODO: Add AWS_ACCOUNT_ID as a GitHub Secret or replace the placeholder below
-  #AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   # Define ECR repository name (defaults to GitHub repo name)
   ECR_REPOSITORY_NAME: ${{ github.event.repository.name }}
   # Construct ECR registry URL
