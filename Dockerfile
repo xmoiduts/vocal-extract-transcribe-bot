@@ -97,7 +97,13 @@ RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/t
     python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt
 
 # Copy the rest of the application code, including the submodule contents
-COPY . /app
+COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
+
+# 再复制其他可能经常变动的文件或目录
+COPY ./bot-src /app/bot-src
+COPY ./other_specific_file_or_dir /app/other_specific_file_or_dir
+COPY ./entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Download and place the models into a specific directory within the image.
 # This increases image size but makes runtime faster.
@@ -122,9 +128,6 @@ ENV OUTPUT_S3_PREFIX=""
 # Create local directories for input/output processing
 RUN mkdir -p $LOCAL_INPUT_DIR $LOCAL_OUTPUT_DIR
 
-# Add an entrypoint script responsible for S3 sync and running the inference
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 
 # Set the working directory for the inference script 
 WORKDIR /app/Music-Source-Separation-Training
