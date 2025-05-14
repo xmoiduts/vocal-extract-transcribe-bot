@@ -101,7 +101,8 @@ COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
 
 # 再复制其他可能经常变动的文件或目录
 COPY ./bot-src /app/bot-src
-COPY ./other_specific_file_or_dir /app/other_specific_file_or_dir
+COPY ./runpod_adapter /app/runpod_adapter
+#COPY ./other_specific_file_or_dir /app/other_specific_file_or_dir
 COPY ./entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
