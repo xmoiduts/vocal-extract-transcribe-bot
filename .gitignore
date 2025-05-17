@@ -1,3 +1,4 @@
 input-sounds/**.mp3
 output-sounds/**/*.wav
 output-sounds/**/*.mp3
+doc/thinking/

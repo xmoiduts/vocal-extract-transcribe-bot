@@ -6,6 +6,13 @@ on:
     - main
     - develop
     - cicd/*
+    paths:
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - 'Music-Source-Separation-Training/**'
+      - 'runpod_adapter/**'
+      - 'entrypoint.sh'
+      - '.github/workflows/build-python-project.yml'
 
 env:
   # Define image name variables - Adjust USERNAME/REPO as needed
