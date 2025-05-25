@@ -28,16 +28,18 @@ Telegram Bot
     - replies: a "help message"
   - /mylist [msg, keyboard]
     - replies: a "transcription to-do list message"
+  - /setlang [msg, keyboard]
+    - replies: a "language selection message"
     
 - group chat:
-  - @bot
+  - /start@bot
     - replies: = private chat /start
-  - @bot replying to a msg containing 1 or more audio file(s)
+  - /add_music@bot replying to a msg containing 1 or more audio file(s)
     - replies: = private chat "replies to a message with an audio file, with any msg"
     - add audio to:
       - transcription to-do list of the {user $\times$ group}
-  - @bot mylist
-    - replies: = private chat /mylist, but only shows the {user $\times$ group} list
+  - /mylist@bot
+    - replies: = private chat /mylist, but only shows the {user $\times$ group} list, shows the currently-added audio files, no historical transcription jobs.
 
 - approval private chat/group:
   - needs: admin account for every msg
@@ -65,6 +67,7 @@ Telegram Bot
   - content:
     - user_id: str
     - status: [admin, user, blocked]
+    - language: [en, zh]
   - other accounts not in the userlist will need a manual approval to launch a new transcription job
 
 - transcription to-do list message
