@@ -31,8 +31,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           mkdir ./deployment_package # Create a specific directory for packaging
-          echo "Copying lambda_function.py to deployment_package..."
-          cp -r bot-src/ ./deployment_package/
+          
+          echo "Copying Python source files to deployment_package..."
+          # 复制所有Python文件
+          cp bot-src/* ./deployment_package/
+          
+          
+          # 创建__init__.py使其成为Python包
+          #touch ./deployment_package/__init__.py
+          
+          echo "Copied Python files:"
+          ls -la ./deployment_package/*.py
           
           # Do not install dependencies from other requirements.txt
           if [ -f bot-src/requirements.txt ]; then
@@ -47,6 +56,10 @@ jobs:
           zip -r ../lambda_function.zip .
           cd .. 
           echo "Created lambda_function.zip in project root."
+          
+          # 验证包内容
+          echo "Package contents:"
+          unzip -l lambda_function.zip | grep "\.py$"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
