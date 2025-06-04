@@ -32,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           mkdir ./deployment_package # Create a specific directory for packaging
           echo "Copying lambda_function.py to deployment_package..."
-          cp bot-src/lambda_function.py ./deployment_package/
+          cp bot-src/ ./deployment_package/
           
           # Do not install dependencies from other requirements.txt
           if [ -f bot-src/requirements.txt ]; then
