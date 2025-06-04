@@ -44,6 +44,8 @@ class TelegramClient:
         
         try:
             response = requests.post(url, data=payload, timeout=30)
+            print(f"📱 TELEGRAM RESPONSE to chat {chat_id}:")
+            print(f"   response.json()")
             return response.json()
         except Exception as e:
             print(f"❌ Error sending message: {e}")
