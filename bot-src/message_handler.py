@@ -273,12 +273,12 @@ class MessageHandler:
                    "• /help - Show this help\n" \
                    "• /mylist - Show your transcription queue\n" \
                    "• /setlang - Change transcription language\n" \
-                   "• /remove \<item_id> - Remove item from queue\n\n" \
+                   "• /remove &lt;item_id&gt; - Remove item from queue\n\n" \
                    "👥 <b>Group Chat:</b>\n" \
                    f"• /start{config.get_bot_mention()} - Show welcome message\n" \
                    f"• /add_music{config.get_bot_mention()} - Add replied audio to queue\n" \
                    f"• /mylist{config.get_bot_mention()} - Show your queue\n" \
-                   f"• /remove{config.get_bot_mention()} \<item_id> - Remove item\n\n" \
+                   f"• /remove{config.get_bot_mention()} &lt;item_id&gt; - Remove item\n\n" \
                    "🎵 <b>Supported formats:</b>\n" \
                    "MP3, MP4, M4A, WAV, FLAC, OGG, WebM"
         
@@ -304,7 +304,7 @@ class MessageHandler:
             "• album_track_2.mp3 (3:58)\n\n"
             "✅ <b>Completed today:</b>\n"
             "• previous_audio.mp3 - Download transcript\n\n"
-            "Use /remove \<item_id> to cancel items.",
+            "Use /remove &lt;item_id&gt; to cancel items.",
             parse_mode='HTML'
         )
     
@@ -360,7 +360,7 @@ class MessageHandler:
             self.telegram.send_message(
                 chat_id,
                 "❌ Please specify an item ID to remove.\n\n"
-                "Usage: /remove \<item_id>\n"
+                "Usage: /remove &lt;item_id&gt;\n"
                 "Use /mylist to see your queue with item IDs.",
                 reply_to_message_id=message['message_id']
             )
