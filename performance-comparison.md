@@ -114,6 +114,13 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 - 3:33 music takes 35s
 - 3:18 music takes 33s
 
+### US-TX-1 A6000 48G AMD EPYC 7543 16C62G
+- Container starts in 10s
+- [6.8]x | runs at 300000it/s | audio has 44100it per second
+- 3:33 music takes 35s
+- 3:18 music takes 31s
+- This A6000 is highly unstable in performance.
+
 ### US-KS-2 L40 32c 250GB RAM
 - up in 6s
 - [7.65]x | runs at 337500it/s | audio has 44100it per second
@@ -161,9 +168,10 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 | AWS g6e.2xlarge          | 8C30G                     | L40s               | 428500       | 9.7x             |                        | 23                       | 21                       | 280                          | N/A                   | N/A                                 |
 | AWS g6e.xlarge           | 4C15G                     | L40s               | 426500       | 9.7x             |                        | 23                       | 21                       |                              | N/A                   | N/A                                 |
 | RunPod RTX A4000         | 10C20G EPYC               | RTX A4000          | 178000       | 4.03x            |                        | 53                       | 49                       | 130 (Container Start)        | 0.00016               | 25188                               |
-| RunPod RTX A4500         | 12C62G EPYC 7352          | RTX A4500          | 245000       | 5.55x            |                        | 39                       | 36                       | 105 (Container Start)        | 0.00016               | 34688                               |
+| RunPod RTX A4500         | 12C62G EPYC 7352          | RTX A4500          | 245000       | 5.55x            |                        | 39                       | 36                       | 105 (Container Start)        | 0.00016               | **34688**                           |
 | RunPod RTX 2000 Ada      | 6C31G                     | RTX 2000 Ada       | 107000       | 2.42x            |                        | 89                       | 84                       | 5 (Container Start)          | 0.00016               | 15125                               |
-| RunPod RTX A5000         | 9C50G                     | RTX A5000          | 285000       | 6.4x             |                        | 34                       | 31                       | 10 (Container Start)         | 0.00019               | 33684                               |
+| RunPod RTX A5000         | 9C50G                     | RTX A5000          | 285000       | 6.4x             |                        | 34                       | 31                       | 10 (Container Start)         | 0.00019               | **33684**                           |
+| RunPod A6000             | 16C62G EPYC 7543          | A6000              | 300000       | 6.8x             |                        | 35                       | 31                       | 10 (Container Start)         | 0.00034               | 20000                               |
 | RunPod A40               | 9C50G                     | A40                | 275000       | 6.23x            |                        | 35                       | 33                       | 4 (Container Start)          | 0.00034               | 18324                               |
 | RunPod L40               | 32C250G                   | L40                | 337500       | 7.65x            |                        | 29                       | 26                       | 6 (Container Start)          | 0.00053               | 14434                               |
 | RunPod L40S              | 16C94G                    | L40S               | 430000       | 9.75x            |                        | 22                       | 20                       | 9 (Container Start)          | 0.00053               | 18396                               |
@@ -191,3 +199,4 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 - Asus ROG G14 runs at 96000it/s under windows performance mode and 100000it/s under windows power efficiency mode.
     - Possibly because efficiency mode restricts CPU Energy Performance Preference (EPP), resulting in reduced frequency and power consumption, allowing more power allocation to the GPU.
 - RunPod 3090 4090 5090 serverless workers (home GPU) cannot launch this container.
+- RunPod A6000 is unstable in performance.

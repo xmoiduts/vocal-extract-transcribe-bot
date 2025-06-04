@@ -27,6 +27,7 @@ Performance comparison per page: [performance-comparison.md](performance-compari
 ## TG-specific:
 - `Privacy mode` must be turned **off** for the bot to properly receive messages
 - TELEGRAM_BOT_TOKEN
+- TELEGRAM_BOT_USERNAME
 - TELEGRAM_WEBHOOK_URL # use lambda service
 - configured bot quick function commands like `/transcribe` and `/add_music@<bot_username>`
 

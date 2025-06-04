@@ -24,6 +24,9 @@ Telegram Bot
   - replies to a message with an audio file, with any msg, exmaple: '.'
     - adds the audio file to the new transcription to-do list
     - replies: a "transcription to-do list message"
+  - /remove <int>
+    - removes the audio file at index <int> from the new transcription to-do list
+    - replies: a "transcription to-do list message", with heading "removed: <audio_file_name>"
   - /help [msg, keyboard]
     - replies: a "help message"
   - /mylist [msg, keyboard]
@@ -38,6 +41,7 @@ Telegram Bot
     - replies: = private chat "replies to a message with an audio file, with any msg"
     - add audio to:
       - transcription to-do list of the {user $\times$ group}
+  - /remove@bot <int>: = private chat /remove <int>
   - /mylist@bot
     - replies: = private chat /mylist, but only shows the {user $\times$ group} list, shows the currently-added audio files, no historical transcription jobs.
 
@@ -72,7 +76,7 @@ Telegram Bot
 
 - transcription to-do list message
   - content:
-    - text field: this user's audio files yet to be added to the new transcription job
+    - text field: this user's audio files yet to be added to the new transcription job, with each audio file's name and index
     - optional text field: if the user is not in the userlist, the text will be: "you are not in the userlist, this transcription list is for preview only"
     - button field:
       - only the {user $\times$ group} + admin (if in the group) can operate the buttons
@@ -108,3 +112,17 @@ Telegram Bot
     - button field:
       - "approve": click to add the account to the userlist
       - "reject": click to reject the request
+
+# locating media file
+media file message: having the below field:
+```
+json.message.[reply_to_message].document.mime_type == "audio/mpeg" # more types?
+```
+For private chat, media files will be [add]ed to the new transcription to-do list immediately when detected.
+For group chat, media files will be [add]ed to the new transcription to-do list after the user replies to the bot with /add_music@bot
+
+When media file is to be [add]ed, the bot will:
+- detect media group and try to [add] all files in the group to the new transcription to-do list
+  - for each file, the bot will validate the file's size and duration, <where to store limit config?> document file type doesn't have duration, so only file size will be validated.
+  - if the file is not valid, the bot will reply to the user with the error message
+  - if the file is valid, the bot will add the file to the new transcription to-do list
