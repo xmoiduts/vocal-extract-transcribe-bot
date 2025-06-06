@@ -77,6 +77,8 @@ class MessageHandler:
             self._handle_start_command(message)
         elif command == '/help':
             self._handle_help_command(message)
+        elif command == '/add_music':
+            self._handle_add_music_command(message)
         elif command == '/mylist':
             self._handle_mylist_command(message)
         elif command == '/setlang':
@@ -271,6 +273,7 @@ class MessageHandler:
                    "🏠 <b>Private Chat:</b>\n" \
                    "• /start - Show welcome message\n" \
                    "• /help - Show this help\n" \
+                   "• /add_music - Add replied audio to queue\n" \
                    "• /mylist - Show your transcription queue\n" \
                    "• /setlang - Change transcription language\n" \
                    "• /remove &lt;item_id&gt; - Remove item from queue\n\n" \
@@ -378,11 +381,15 @@ class MessageHandler:
         )
     
     def _handle_add_music_command(self, message: Dict[str, Any]):
-        """处理 /add_music 命令（群聊）"""
+        """处理 /add_music 命令（私聊和群聊）"""
         chat_id = message['chat']['id']
+        chat_type = message['chat']['type']
         user_name = message.get('from', {}).get('first_name', 'User')
         
-        print("➕ Add music command in group")
+        is_private = chat_type == 'private'
+        chat_context = "private chat" if is_private else "group"
+        
+        print(f"➕ Add music command in {chat_context}")
         
         if 'reply_to_message' in message:
             reply_to = message['reply_to_message']
@@ -396,10 +403,16 @@ class MessageHandler:
                 elif 'document' in reply_to:
                     audio_name = reply_to['document'].get('file_name', 'audio file')
                 
+                # 构建响应消息的组件
+                user_prefix = "" if is_private else f"<b>{user_name}</b>, "
+                transcript_location = "back to you" if is_private else "here "
+                
+                response_text = f"✅ {user_prefix}I've added <b>{audio_name}</b> to your transcription queue!\n\n" \
+                               f"I'll send transcript {transcript_location} when it's ready."
+                
                 self.telegram.send_message(
                     chat_id,
-                    f"✅ <b>{user_name}</b>, I've added <b>{audio_name}</b> to your personal transcription queue!\n\n"
-                    "I'll send you the transcript in our private chat when it's ready.",
+                    response_text,
                     parse_mode='HTML',
                     reply_to_message_id=message['message_id']
                 )
@@ -413,9 +426,14 @@ class MessageHandler:
                 )
         else:
             print("   - Not a reply to any message")
+            
+            # 构建错误消息的组件
+            bot_mention_suffix = "" if is_private else f"{config.get_bot_mention()}"
+            error_text = f"❌ <b>{user_name}</b>, please reply to an audio message when using /add_music{bot_mention_suffix}."
+            
             self.telegram.send_message(
                 chat_id,
-                f"❌ <b>{user_name}</b>, please reply to an audio message when using {config.get_bot_mention()}.",
+                error_text,
                 parse_mode='HTML',
                 reply_to_message_id=message['message_id']
             ) 
