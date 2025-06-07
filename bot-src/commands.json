@@ -1,0 +1,8 @@
+{
+    "start": "Show welcome message and instructions",
+    "help": "Show available commands",
+    "add_music": "Add replied audio to the transcription queue",
+    "mylist": "Show your transcription queue",
+    "setlang": "Change transcription language",
+    "remove": "Remove an item from the queue"
+} 

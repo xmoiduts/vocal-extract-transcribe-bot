@@ -75,3 +75,35 @@ jobs:
             --zip-file fileb://lambda_function.zip \
             --publish # Optional: to publish a new version
           echo "Lambda function deployed successfully!"
+
+      - name: Update Telegram Bot Commands
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          echo "Updating bot commands on Telegram..."
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          # Use jq to read commands.json, format it for the API, and add the dynamic timestamp command
+          JSON_PAYLOAD=$(jq --arg ts "Last updated: $TIMESTAMP" \
+            '{commands: ([to_entries[] | {command: .key, description: .value}] + [{"command": "updated_at", "description": $ts}])}' \
+            bot-src/commands.json)
+          
+          echo "Generated Payload:"
+          echo $JSON_PAYLOAD
+          
+          # Send the command list to the Telegram Bot API
+          API_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setMyCommands"
+          HTTP_RESPONSE=$(curl -s -w "%{http_code}" -X POST -H "Content-Type: application/json" --data "$JSON_PAYLOAD" "$API_URL")
+          HTTP_STATUS=$(echo $HTTP_RESPONSE | sed 's/.*\([0-9]\{3\}\)$/\1/')
+          HTTP_BODY=$(echo $HTTP_RESPONSE | sed 's/[0-9]\{3\}$//')
+
+          echo "Telegram API response body: $HTTP_BODY"
+          echo "Telegram API response status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Bot commands updated successfully!"
+          else
+            echo "🔴 Failed to update bot commands."
+            exit 1
+          fi

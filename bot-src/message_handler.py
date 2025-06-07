@@ -420,7 +420,8 @@ class MessageHandler:
                 print("   - Not replying to audio message")
                 self.telegram.send_message(
                     chat_id,
-                    f"❌ <b>{user_name}</b>, please reply to an audio message when using this command.",
+                    f"❌ <b>{user_name}</b>, please reply to an audio message "
+                    f"when using this command.",
                     parse_mode='HTML',
                     reply_to_message_id=message['message_id']
                 )
