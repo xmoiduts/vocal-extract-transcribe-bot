@@ -1,7 +1,10 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.9.0-base-ubuntu22.04 AS builder_submodule_wheels
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS builder_submodule_wheels
+
+# Get python version as we change base image sometimes.
+RUN python3 --version
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -47,7 +50,7 @@ RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_w
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.9.0-base-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
