@@ -3,9 +3,6 @@
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
 FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS builder_submodule_wheels
 
-# Get python version as we change base image sometimes.
-RUN python3 --version
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
