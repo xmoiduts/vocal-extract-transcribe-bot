@@ -1,7 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS builder_submodule_wheels
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -36,10 +36,16 @@ COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and de-duplicate requirements for wheel building
-RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
+RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && \
+    echo -e 'torch\ntorchvision\ntorchaudio' >> ./combined_requirements.txt && \
+    cat ./combined_requirements.txt
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
-RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels && \
+
+RUN python3 -m pip wheel --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cu126 \
+        -r ./combined_requirements.txt \
+        -w /all_wheels && \
     echo "Pip cache cleanup: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
 
@@ -47,7 +53,7 @@ RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_w
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -114,7 +120,8 @@ COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
 #COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
 # use mount to avoid copying the large all_wheels directory (3.41GB) which cannot be later deleted.
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/tmp/all_wheels \
-    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt
+    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels \
+        -r combined_requirements.txt
 
 # Copy the rest of the application code, including the submodule contents
 COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
