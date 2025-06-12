@@ -95,7 +95,9 @@ RUN apt-get update && \
     # It boosts some performance.
     # As it is added to the MSST engine later, earlier models need to have this manually hacked in.
     echo "Adding 'sage_attention: True' to model config" && \
+    set -x && \
     sed -i '/^model:/a \ \ sage_attention: True' /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    set +x && \
     apt-get purge -y --auto-remove curl sed && \
     apt-get clean && \
     # Clean up apt cache
