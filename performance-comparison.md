@@ -108,6 +108,15 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 - 3:33 music takes 34s
 - 3:18 music takes 31s
 
+```
+### RTX 4090 16c61g
+- EU-RO-1
+- Container starts in 6s
+- [11.1]x | runs at 490000it/s | audio has 44100it per second
+- 3:33 music takes 22s
+- 3:18 music takes 20s
+```
+
 ### CA-MTL-1 A40 9 vCPUs 50 GB RAM
 - Container starts in 4s
 - [6.23]x | runs at 275000it/s | audio has 44100it per second

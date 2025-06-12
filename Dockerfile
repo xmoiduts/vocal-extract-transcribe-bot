@@ -71,13 +71,32 @@ RUN apt-get update && \
     libportaudio2 \
     # Needed for HTTPS connections (e.g. by curl)
     ca-certificates && \
-    # Temporarily install curl to download models, then remove it.
-    # Also, download models in this same layer to avoid leaving curl installed.
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download the large, static model checkpoint first to leverage caching.
+# This layer is large but should rarely change.
+RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     mkdir -p /app/models && \
-    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    echo "Downloading large model checkpoint..." && \
     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt && \
     apt-get purge -y --auto-remove curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download the model config, modify it, and clean up.
+# This layer is small and may change if the config URL or patch logic changes.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl sed && \
+    echo "Downloading and patching model config..." && \
+    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    # Sage Attention is Linux-only, windows have no Nvidia `triton` support that it depends on.
+    # It boosts some performance.
+    # As it is added to the MSST engine later, earlier models need to have this manually hacked in.
+    echo "Adding 'sage_attention: True' to model config" && \
+    sed -i '/^model:/a \ \ sage_attention: True' /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    apt-get purge -y --auto-remove curl sed && \
     apt-get clean && \
     # Clean up apt cache
     rm -rf /var/lib/apt/lists/*
