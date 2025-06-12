@@ -36,17 +36,19 @@ COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and de-duplicate requirements for wheel building
-RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && \
-    echo -e 'torch\ntorchvision\ntorchaudio' >> ./combined_requirements.txt && \
-    cat ./combined_requirements.txt
+RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
-
 RUN python3 -m pip wheel --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cu126 \
+        torch torchvision torchaudio \
+        -w /all_wheels && \
+        echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
+        rm -rf /root/.cache/pip
+RUN python3 -m pip wheel --no-cache-dir \
         -r ./combined_requirements.txt \
         -w /all_wheels && \
-    echo "Pip cache cleanup: Removing /root/.cache/pip" && \
+    echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu129 index.
