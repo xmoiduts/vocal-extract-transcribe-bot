@@ -115,6 +115,7 @@ Using model: `model_bs_roformer_ep_368_sdr_12.9628.yaml`
 - [11.1]x | runs at 490000it/s | audio has 44100it per second
 - 3:33 music takes 22s
 - 3:18 music takes 20s
+# 35806 cost effectiveness
 ```
 
 ### CA-MTL-1 A40 9 vCPUs 50 GB RAM

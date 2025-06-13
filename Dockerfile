@@ -1,7 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.6.3-base-ubuntu22.04 AS builder_submodule_wheels
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -55,7 +55,7 @@ RUN python3 -m pip wheel --no-cache-dir \
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.6.3-base-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -78,7 +78,10 @@ RUN apt-get update && \
     # Runtime libraries for pyaudio
     libportaudio2 \
     # Needed for HTTPS connections (e.g. by curl)
-    ca-certificates && \
+    ca-certificates \
+    # C compiler needed by triton for runtime compilation
+    gcc \
+    && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
