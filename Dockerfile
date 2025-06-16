@@ -82,6 +82,8 @@ RUN apt-get update && \
     ca-certificates \
     # C compiler needed by triton for runtime compilation
     gcc \
+    # C standard library development files (e.g. stdlib.h), needed by triton
+    libc6-dev \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
