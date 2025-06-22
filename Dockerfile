@@ -51,11 +51,15 @@ RUN python3 -m pip wheel --no-cache-dir \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
 
+# ---------------------------------------------------------------------
+# ------------------------- STAGE: FINAL IMAGE -------------------------
+# ---------------------------------------------------------------------
+
 # Choose a base image with CUDA runtime compatible with PyTorch's cu129 index.
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.6.3-devel-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -84,8 +88,6 @@ RUN apt-get update && \
     gcc \
     # C standard library development files (e.g. stdlib.h), needed by triton
     libc6-dev \
-    # The full toolkit needed by Triton for JIT compilation
-    cuda-toolkit-12-6 \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

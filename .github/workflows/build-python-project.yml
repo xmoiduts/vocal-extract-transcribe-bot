@@ -41,6 +41,7 @@ jobs:
       with:
         submodules: 'recursive' # Ensure submodule code is available for the build context
 
+    # Because docker build is very disk-intensive, we need to free up some space on the runner.
     - name: Free Up Disk Space on Runner
       run: |
         echo "Initial disk space:"
@@ -116,6 +117,7 @@ jobs:
         cache-from: type=gha # Enable pulling cache from GHA
         cache-to: type=gha,mode=max # Enable pushing cache to GHA (mode=max for better caching)
 
+    # Check disk usage after build to reveal how many disk margin we have.
     - name: Get current disk usage after build
       run: df -h
 
