@@ -1,7 +1,7 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
 # --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.6.3-devel-ubuntu22.04 AS builder_submodule_wheels
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -59,7 +59,7 @@ RUN python3 -m pip wheel --no-cache-dir \
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.6.3-devel-ubuntu22.04
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -112,8 +112,11 @@ RUN apt-get update && \
     # Sage Attention is Linux-only, windows have no Nvidia `triton` support that it depends on.
     # It boosts some performance.
     # As it is added to the MSST engine later, earlier models need to have this manually hacked in.
-    echo "Adding 'sage_attention: True' to model config" && \
-    sed -i '/^model:/a \ \ sage_attention: True' /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    echo "Enabling 'sage_attention' and disabling 'flash_attn' in model config" && \
+    sed -i \
+        -e '/^model:/a \ \ sage_attention: True' \
+        -e 's/flash_attn: true/flash_attn: false/' \
+        /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
     # keep sed, attempting to remove it will break the build.
     apt-get purge -y --auto-remove curl && \
     apt-get clean && \
