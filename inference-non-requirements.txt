@@ -1,0 +1,47 @@
+# Packages that should NOT be installed in inference-only containers
+# This file is used by CI/CD to exclude training-specific dependencies
+
+# === Training-specific packages ===
+wandb
+auraloss
+torch_log_wmse
+prodigyopt
+accelerate
+
+# === Data augmentation packages (training only) ===
+audiomentations==0.24.0
+pedalboard~=0.8.1
+torch_audiomentations
+
+# === Training data processing ===
+pandas
+
+# === Training metrics ===
+torchmetrics==0.11.4
+
+# === Model architecture packages (exclude if not using specific models) ===
+# Comment out any of these if your inference setup uses these specific models
+segmentation_models_pytorch==0.3.3
+torchseg
+demucs==4.0.0
+asteroid==0.7.0
+
+# === GUI and interaction packages (not needed in containers) ===
+wxpython==4.2.2
+keyboard
+pyaudio
+
+# === Conditional packages (may be needed depending on usage) ===
+# matplotlib  # Uncomment if --draw_spectro is never used
+# bitsandbytes  # Uncomment if no quantized models are used
+# loralib  # Uncomment if no LoRA checkpoints are used
+# timm==0.9.2  # Uncomment if no vision transformer models are used
+# transformers~=4.35.0  # Uncomment if no HuggingFace models are used
+
+# === Experimental features (likely safe to exclude) ===
+hyper_connections==0.1.11
+sageattention==1.0.6 # implicitly contains triton
+spafe==0.3.2
+
+# === Development/debugging tools ===
+# Add any other development-only tools here 

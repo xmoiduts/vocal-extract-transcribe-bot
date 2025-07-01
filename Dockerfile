@@ -1,6 +1,8 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
-# --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
+# ---------------------------------------------------------------------
+# ----------------- STAGE: BUILD PYTHON DEPENDENCIES ------------------
+# ---------------------------------------------------------------------
 FROM nvidia/cuda:12.6.3-base-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
@@ -32,11 +34,15 @@ WORKDIR /app_build
 # Copy requirements files
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
-# Filter out wxpython from submodule requirements
-RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+COPY inference-non-requirements.txt ./inference_non_requirements.txt
 
-# Combine and de-duplicate requirements for wheel building
-RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
+# Copy and run the script to [filter out] inference-non-requirements
+COPY scripts/filter_requirements.py .
+RUN python3 filter_requirements.py && cat ./inference_requirements.txt
+
+# Copy and prepare the wheel partitioning script
+COPY scripts/partition_wheels.py .
+RUN chmod +x ./partition_wheels.py
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
 RUN python3 -m pip wheel --no-cache-dir \
@@ -46,13 +52,27 @@ RUN python3 -m pip wheel --no-cache-dir \
         echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
         rm -rf /root/.cache/pip
 RUN python3 -m pip wheel --no-cache-dir \
-        -r ./combined_requirements.txt \
+        -r ./inference_requirements.txt \
         -w /all_wheels && \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
 
+# | Remove unnecessary NVIDIA library wheels 
+# | AFTER python wheels building and BEFORE partitioning
+# | to prevent them from ever being installed.
+# | warning: removing some "unnecessary" NVIDIA libraries to reduce image size, 
+# v may break some functionality, not tested.
+RUN find /all_wheels -type f -name 'nvidia_nccl_cu12*.whl' -delete && \
+    find /all_wheels -type f -name 'nvidia_cusparse_cu12*.whl' -delete && \
+    find /all_wheels -type f -name 'nvidia_cusparselt_cu12*.whl' -delete && \
+    find /all_wheels -type f -name 'nvidia_cusolver_cu12*.whl' -delete && \
+    echo "Removed non-essential NVIDIA wheel files from the build cache."
+
+# Run the partitioning script against the directory containing ALL wheels
+RUN ./partition_wheels.py /all_wheels 4
+
 # ---------------------------------------------------------------------
-# ------------------------- STAGE: FINAL IMAGE -------------------------
+# ------------------------- STAGE: FINAL IMAGE ------------------------
 # ---------------------------------------------------------------------
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu129 index.
@@ -69,7 +89,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3.11 \
     python3-pip \
-    python3.11-dev && \
+    #python3.11-dev && \ # for triton that we decided to not use as lowering performance
     # Make python3.11 the default python3
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     rm -rf /var/lib/apt/lists/*
@@ -85,9 +105,9 @@ RUN apt-get update && \
     # Needed for HTTPS connections (e.g. by curl)
     ca-certificates \
     # C compiler needed by triton for runtime compilation
-    gcc \
+    #gcc \
     # C standard library development files (e.g. stdlib.h), needed by triton
-    libc6-dev \
+    #libc6-dev \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -109,14 +129,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl sed && \
     echo "Downloading and patching model config..." && \
     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
-    # Sage Attention is Linux-only, windows have no Nvidia `triton` support that it depends on.
-    # It boosts some performance.
-    # As it is added to the MSST engine later, earlier models need to have this manually hacked in.
-    echo "Enabling 'sage_attention' and disabling 'flash_attn' in model config" && \
-    sed -i \
-        -e '/^model:/a \ \ sage_attention: True' \
-        -e 's/flash_attn: true/flash_attn: false/' \
-        /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    # Sage Attention is Linux-only, windows use `triton-windows` 3rd party package.
+    # It ~~boosts some~~ drags performance.
+    # ~~As it is added to the MSST engine later, earlier models need to have this manually hacked in~~.
+    # echo "Enabling 'sage_attention' and disabling 'flash_attn' in model config" && \
+    # sed -i \
+    #     -e '/^model:/a \ \ sage_attention: True' \
+    #     -e 's/flash_attn: true/flash_attn: false/' \
+    #     /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
     # keep sed, attempting to remove it will break the build.
     apt-get purge -y --auto-remove curl && \
     apt-get clean && \
@@ -130,13 +150,27 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip
 WORKDIR /app
 
 # python dependencies
-COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
+COPY --from=builder_submodule_wheels /app_build/part_*_wheels.txt ./
 
-#COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
-# use mount to avoid copying the large all_wheels directory (3.41GB) which cannot be later deleted.
-RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/tmp/all_wheels \
-    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels \
-        -r combined_requirements.txt
+# Install dependencies in partitioned layers to optimize pull times
+# Each RUN command creates a new layer.
+# use mount to avoid copying the large all_wheels directory (3-6 GB) which 
+# cannot be later deleted.
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    python3 -m pip install --no-cache-dir \
+        -r part_1_wheels.txt
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    python3 -m pip install --no-cache-dir \
+        -r part_2_wheels.txt
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    python3 -m pip install --no-cache-dir \
+        -r part_3_wheels.txt
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    python3 -m pip install --no-cache-dir \
+        -r part_4_wheels.txt
 
 # Copy the rest of the application code, including the submodule contents
 COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
