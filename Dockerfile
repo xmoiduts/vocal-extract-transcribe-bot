@@ -154,23 +154,19 @@ COPY --from=builder_submodule_wheels /app_build/part_*_wheels.txt ./
 
 # Install dependencies in partitioned layers to optimize pull times
 # Each RUN command creates a new layer.
-# use mount to avoid copying the large all_wheels directory (3-6 GB) which 
-# cannot be later deleted.
+# Use mount to avoid [copying] the large all_wheels directory (3-6 GB) 
+# which cannot be later deleted.
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
-    python3 -m pip install --no-cache-dir \
-        -r part_1_wheels.txt
+    xargs -a part_1_wheels.txt python3 -m pip install --no-cache-dir --no-deps
 
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
-    python3 -m pip install --no-cache-dir \
-        -r part_2_wheels.txt
+    xargs -a part_2_wheels.txt python3 -m pip install --no-cache-dir --no-deps
 
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
-    python3 -m pip install --no-cache-dir \
-        -r part_3_wheels.txt
+    xargs -a part_3_wheels.txt python3 -m pip install --no-cache-dir --no-deps
 
 RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
-    python3 -m pip install --no-cache-dir \
-        -r part_4_wheels.txt
+    xargs -a part_4_wheels.txt python3 -m pip install --no-cache-dir --no-deps
 
 # Copy the rest of the application code, including the submodule contents
 COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
@@ -181,14 +177,6 @@ COPY ./runpod_adapter /app/runpod_adapter
 #COPY ./other_specific_file_or_dir /app/other_specific_file_or_dir
 COPY ./entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
-# Download and place the models into a specific directory within the image.
-# This increases image size but makes runtime faster.
-# Alternatively, download them from S3 in the entrypoint script.
-# Model download is now part of the apt-get install layer to optimize curl usage.
-# RUN mkdir -p /app/models
-# RUN curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
-#     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
 
 # Define default paths and model type using environment variables.
 # These can be overridden by the Fargate Task Definition environment settings.

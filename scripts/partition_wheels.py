@@ -41,12 +41,15 @@ def partition_wheels(wheel_dir, num_partitions):
         output_filename = f'part_{i+1}_wheels.txt'
         with open(output_filename, 'w') as f:
             # Sort for determinism, though not strictly necessary
-            for path in sorted(partition):
+            sorted_partition = sorted(partition)
+            for path in sorted_partition:
                 f.write(path + '\n')
         
         total_size_mb = partition_sizes[i] / (1024 * 1024)
-        print(f"Partition {i+1} ({output_filename}): {len(partition)} wheels, Total Size: {total_size_mb:.2f} MB")
-    print("--------------------------")
+        print(f"\nPartition {i+1} ({output_filename}): {len(partition)} wheels, Total Size: {total_size_mb:.2f} MB")
+        for path in sorted_partition:
+            print(f"  - {os.path.basename(path)}")
+    print("\n--------------------------")
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
