@@ -32,23 +32,26 @@ def partition_wheels(wheel_dir, num_partitions):
         # Find the partition with the smallest current total size
         min_size_idx = min(range(num_partitions), key=lambda i: partition_sizes[i])
         
-        # Add the wheel to this partition
-        partitions[min_size_idx].append(wheel['path'])
+        # Add the wheel object to this partition
+        partitions[min_size_idx].append(wheel)
         partition_sizes[min_size_idx] += wheel['size']
 
     print("--- Partitioning Results ---")
     for i, partition in enumerate(partitions):
         output_filename = f'part_{i+1}_wheels.txt'
+
+        # Sort partition by wheel size (ascending) for installation order
+        partition.sort(key=lambda w: w['size'])
+
         with open(output_filename, 'w') as f:
-            # Sort for determinism, though not strictly necessary
-            sorted_partition = sorted(partition)
-            for path in sorted_partition:
-                f.write(path + '\n')
+            for wheel in partition:
+                f.write(wheel['path'] + '\n')
         
         total_size_mb = partition_sizes[i] / (1024 * 1024)
         print(f"\nPartition {i+1} ({output_filename}): {len(partition)} wheels, Total Size: {total_size_mb:.2f} MB")
-        for path in sorted_partition:
-            print(f"  - {os.path.basename(path)}")
+        # Print wheels in installation order (smallest to largest)
+        for wheel in partition:
+            print(f"  - {os.path.basename(wheel['path'])}")
     print("\n--------------------------")
 
 if __name__ == '__main__':
