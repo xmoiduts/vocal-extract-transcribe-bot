@@ -69,7 +69,7 @@ RUN find /all_wheels -type f -name 'nvidia_nccl_cu12*.whl' -delete && \
     echo "Removed non-essential NVIDIA wheel files from the build cache."
 
 # Run the partitioning script against the directory containing ALL wheels
-RUN ./partition_wheels.py /all_wheels 4
+RUN ./partition_wheels.py /all_wheels 4 
 
 # ---------------------------------------------------------------------
 # ------------------------- STAGE: FINAL IMAGE ------------------------
