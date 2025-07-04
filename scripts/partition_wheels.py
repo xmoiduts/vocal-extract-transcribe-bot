@@ -36,21 +36,30 @@ def partition_wheels(wheel_dir, num_partitions):
         partitions[min_size_idx].append(wheel)
         partition_sizes[min_size_idx] += wheel['size']
 
-    print("--- Partitioning Results ---")
+    # Create partition data with size info for sorting
+    partition_data = []
     for i, partition in enumerate(partitions):
+        partition_data.append({
+            'index': i,
+            'wheels': partition,
+            'total_size': partition_sizes[i]
+        })
+    
+    # Sort partitions by total size (ascending) so Docker layers go from small to large
+    partition_data.sort(key=lambda p: p['total_size'])
+
+    print("--- Partitioning Results ---")
+    for i, data in enumerate(partition_data):
         output_filename = f'part_{i+1}_wheels.txt'
 
-        # Sort partition by wheel size (ascending) for installation order
-        partition.sort(key=lambda w: w['size'])
-
         with open(output_filename, 'w') as f:
-            for wheel in partition:
+            for wheel in data['wheels']:
                 f.write(wheel['path'] + '\n')
         
-        total_size_mb = partition_sizes[i] / (1024 * 1024)
-        print(f"\nPartition {i+1} ({output_filename}): {len(partition)} wheels, Total Size: {total_size_mb:.2f} MB")
-        # Print wheels in installation order (smallest to largest)
-        for wheel in partition:
+        total_size_mb = data['total_size'] / (1024 * 1024)
+        print(f"\nPartition {i+1} ({output_filename}): {len(data['wheels'])} wheels, Total Size: {total_size_mb:.2f} MB")
+        # Print wheels in the partition
+        for wheel in data['wheels']:
             print(f"  - {os.path.basename(wheel['path'])}")
     print("\n--------------------------")
 

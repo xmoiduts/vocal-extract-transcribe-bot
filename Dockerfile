@@ -34,11 +34,12 @@ WORKDIR /app_build
 # Copy requirements files
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
-COPY inference-non-requirements.txt ./inference_non_requirements.txt
 
-# Copy and run the script to [filter out] inference-non-requirements
-COPY scripts/filter_requirements.py .
-RUN python3 filter_requirements.py && cat ./inference_requirements.txt
+# Combine and deduplicate requirements files, then display them
+RUN cat ./main_requirements.txt ./submodule_requirements.txt | sort -u > ./all_requirements.txt && \
+    echo "--- Combined requirements START ---" && \
+    cat ./all_requirements.txt && \
+    echo "--- Combined requirements END ---"
 
 # Copy and prepare the wheel partitioning script
 COPY scripts/partition_wheels.py .
@@ -52,7 +53,7 @@ RUN python3 -m pip wheel --no-cache-dir \
         echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
         rm -rf /root/.cache/pip
 RUN python3 -m pip wheel --no-cache-dir \
-        -r ./inference_requirements.txt \
+        -r ./all_requirements.txt \
         -w /all_wheels && \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
