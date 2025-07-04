@@ -35,8 +35,11 @@ WORKDIR /app_build
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
 
+# Filter out wxpython from submodule requirements
+RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+
 # Combine and deduplicate requirements files, then display them
-RUN cat ./main_requirements.txt ./submodule_requirements.txt | sort -u > ./all_requirements.txt && \
+RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./all_requirements.txt && \
     echo "--- Combined requirements START ---" && \
     cat ./all_requirements.txt && \
     echo "--- Combined requirements END ---"
@@ -57,17 +60,6 @@ RUN python3 -m pip wheel --no-cache-dir \
         -w /all_wheels && \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
-
-# | Remove unnecessary NVIDIA library wheels 
-# | AFTER python wheels building and BEFORE partitioning
-# | to prevent them from ever being installed.
-# | warning: removing some "unnecessary" NVIDIA libraries to reduce image size, 
-# v may break some functionality, not tested.
-RUN find /all_wheels -type f -name 'nvidia_nccl_cu12*.whl' -delete && \
-    find /all_wheels -type f -name 'nvidia_cusparse_cu12*.whl' -delete && \
-    find /all_wheels -type f -name 'nvidia_cusparselt_cu12*.whl' -delete && \
-    find /all_wheels -type f -name 'nvidia_cusolver_cu12*.whl' -delete && \
-    echo "Removed non-essential NVIDIA wheel files from the build cache."
 
 # Run the partitioning script against the directory containing ALL wheels
 RUN ./partition_wheels.py /all_wheels 4 
