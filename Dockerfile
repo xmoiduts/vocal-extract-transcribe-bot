@@ -49,20 +49,32 @@ COPY scripts/partition_wheels.py .
 RUN chmod +x ./partition_wheels.py
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
+# Specify to use CUDA torch upfront
 RUN python3 -m pip wheel --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cu126 \
         torch torchvision torchaudio \
         -w /all_wheels && \
         echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
         rm -rf /root/.cache/pip
+
+# Download other requirements
+# Explicitly download numpy<2.3 before other requirements as [numba] currently
+# not supports numpy>=2.3, they wait for Conda numpy 2.3
+# https://github.com/numba/numba/issues/10105 #2025-07-05
 RUN python3 -m pip wheel --no-cache-dir \
+        "numpy<2.3" \
+        -w /all_wheels && \
+    echo "Pip cache cleanup [numpy]: Removing /root/.cache/pip" && \
+    rm -rf /root/.cache/pip && \
+    python3 -m pip wheel --no-cache-dir \
         -r ./all_requirements.txt \
         -w /all_wheels && \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
 
-# Run the partitioning script against the directory containing ALL wheels
-RUN ./partition_wheels.py /all_wheels 4 
+# Display total size of all wheels and partition them
+RUN echo "Total size of all wheels:" && du -sh /all_wheels && \
+    ./partition_wheels.py /all_wheels 6
 
 # ---------------------------------------------------------------------
 # ------------------------- STAGE: FINAL IMAGE ------------------------
