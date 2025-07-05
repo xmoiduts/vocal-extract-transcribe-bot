@@ -35,9 +35,8 @@ WORKDIR /app_build
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
 
-# Filter out wxpython, torch, and torchaudio from submodule requirements
-# We exclude torch and torchaudio because they're already downloaded with CUDA support
-RUN grep -v -E '^(wxpython==|torch>=|torch==|torchaudio$|torchaudio==|torchaudio>=)' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+# Filter out wxpython from submodule requirements
+RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and deduplicate requirements files, then display them
 RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./all_requirements.txt && \
@@ -50,10 +49,15 @@ COPY scripts/partition_wheels.py .
 RUN chmod +x ./partition_wheels.py
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
-# Specify to use CUDA torch upfront
+# Specify to use CUDA torch upfront. Download numpy<2.3 first to establish version constraint
+# before torch/torchvision, as numba currently doesn't support numpy>=2.3
+# refer to https://github.com/numba/numba/issues/10105 #2025-07-05
+# numpy 2.3: torchvision -> numpy (latest 2.3)
+# numpy <2.3: librosa -> numba -> numpy <2.3
 RUN python3 -m pip wheel --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cu126 \
-        torch torchaudio \
+        "numpy<2.3" \
+        torch torchvision torchaudio \
         -w /all_wheels && \
         echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
         rm -rf /root/.cache/pip
