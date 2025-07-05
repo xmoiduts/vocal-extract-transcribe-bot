@@ -35,8 +35,9 @@ WORKDIR /app_build
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
 
-# Filter out wxpython from submodule requirements
-RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+# Filter out wxpython and torch-related packages that we install manually in the next step.
+# This is crucial to prevent pip from downloading CPU versions from PyPI and causing a conflict.
+RUN grep -v -E '^(wxpython==|torch(vision|audio)?==|torch(vision|audio)?>=|torch$)' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and deduplicate requirements files, then display them
 RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./all_requirements.txt && \
@@ -62,8 +63,9 @@ RUN python3 -m pip wheel --no-cache-dir \
         echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
         rm -rf /root/.cache/pip
 
-# Download other requirements
+# Download other requirements, ensuring it also checks the CUDA index for transitive dependencies.
 RUN python3 -m pip wheel --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cu126 \
         -r ./all_requirements.txt \
         -w /all_wheels && \
     echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
