@@ -35,8 +35,9 @@ WORKDIR /app_build
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
 
-# Filter out wxpython from submodule requirements
-RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
+# Filter out wxpython, torch, and torchaudio from submodule requirements
+# We exclude torch and torchaudio because they're already downloaded with CUDA support
+RUN grep -v -E '^(wxpython==|torch>=|torch==|torchaudio$|torchaudio==|torchaudio>=)' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
 # Combine and deduplicate requirements files, then display them
 RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./all_requirements.txt && \
