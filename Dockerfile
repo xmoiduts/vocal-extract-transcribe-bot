@@ -1,7 +1,9 @@
 # Dockerfile for Music Source Separation Training (MSST)
 
-# --------- STAGE: BUILD PYTHON DEPENDENCIES ---------
-FROM nvidia/cuda:12.9.0-base-ubuntu22.04 AS builder_submodule_wheels
+# ---------------------------------------------------------------------
+# ----------------- STAGE: BUILD PYTHON DEPENDENCIES ------------------
+# ---------------------------------------------------------------------
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04 AS builder_submodule_wheels
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -32,22 +34,55 @@ WORKDIR /app_build
 # Copy requirements files
 COPY requirements.txt ./main_requirements.txt
 COPY Music-Source-Separation-Training/requirements.txt ./submodule_requirements.txt
+
 # Filter out wxpython from submodule requirements
 RUN grep -v '^wxpython==' ./submodule_requirements.txt > ./filtered_submodule_reqs.txt
 
-# Combine and de-duplicate requirements for wheel building
-RUN awk '1' ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./combined_requirements.txt && cat ./combined_requirements.txt
+# Combine and deduplicate requirements files, then display them
+RUN cat ./main_requirements.txt ./filtered_submodule_reqs.txt | sort -u > ./all_requirements.txt && \
+    echo "--- Combined requirements START ---" && \
+    cat ./all_requirements.txt && \
+    echo "--- Combined requirements END ---"
+
+# Copy and prepare the wheel partitioning script
+COPY scripts/partition_wheels.py .
+RUN chmod +x ./partition_wheels.py
 
 # Explicitly use python3 (which now should be python3.11) for building wheels
-RUN python3 -m pip wheel --no-cache-dir -r ./combined_requirements.txt -w /all_wheels && \
-    echo "Pip cache cleanup: Removing /root/.cache/pip" && \
+# Specify to use CUDA torch upfront. Download numpy<2.3 first to establish version constraint
+# before torch/torchvision, as numba currently doesn't support numpy>=2.3
+# refer to https://github.com/numba/numba/issues/10105 #2025-07-05
+# numpy 2.3: torchvision -> numpy (latest 2.3)
+# numpy <2.3: librosa -> numba -> numpy <2.3
+RUN python3 -m pip wheel --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cu126 \
+        "numpy<2.3" \
+        torch torchvision torchaudio \
+        -w /all_wheels && \
+        echo "Pip cache cleanup [torch]: Removing /root/.cache/pip" && \
+        rm -rf /root/.cache/pip
+
+# Download other requirements, ensuring it also checks the CUDA index for transitive dependencies.
+RUN python3 -m pip wheel --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cu126 \
+        -r ./all_requirements.txt \
+        -w /all_wheels && \
+    echo "Pip cache cleanup [MSST]: Removing /root/.cache/pip" && \
     rm -rf /root/.cache/pip
+
+# Display total size of all wheels and partition them
+RUN echo "Total size of all wheels:" && du -sh /all_wheels && \
+    ./partition_wheels.py /all_wheels 6
+
+# ---------------------------------------------------------------------
+# ------------------------- STAGE: FINAL IMAGE ------------------------
+# ---------------------------------------------------------------------
 
 # Choose a base image with CUDA runtime compatible with PyTorch's cu129 index.
 # Using CUDA 12.9.0 and Ubuntu 22.04 as a starting point.
 # Adjust the CUDA version (e.g., 12.9.0) and PyTorch index (e.g., cu129)
 # if your target Fargate instances use a different CUDA version.
-FROM nvidia/cuda:12.9.0-base-ubuntu22.04
+FROM nvidia/cuda:12.6.3-base-ubuntu22.04
 
 # Avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -56,7 +91,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python3.11 \
-    python3-pip && \
+    python3-pip &&\
+    #python3.11-dev && \ # for triton that we decided to not use as lowering performance
     # Make python3.11 the default python3
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
     rm -rf /var/lib/apt/lists/*
@@ -70,13 +106,41 @@ RUN apt-get update && \
     # Runtime libraries for pyaudio
     libportaudio2 \
     # Needed for HTTPS connections (e.g. by curl)
-    ca-certificates && \
-    # Temporarily install curl to download models, then remove it.
-    # Also, download models in this same layer to avoid leaving curl installed.
+    ca-certificates \
+    # C compiler needed by triton for runtime compilation
+    #gcc \
+    # C standard library development files (e.g. stdlib.h), needed by triton
+    #libc6-dev \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download the large, static model checkpoint first to leverage caching.
+# This layer is large but should rarely change.
+RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     mkdir -p /app/models && \
-    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    echo "Downloading large model checkpoint..." && \
     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt && \
+    apt-get purge -y --auto-remove curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download the model config, modify it, and clean up.
+# This layer is small and may change if the config URL or patch logic changes.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl sed && \
+    echo "Downloading and patching model config..." && \
+    curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    # Sage Attention is Linux-only, windows use `triton-windows` 3rd party package.
+    # It ~~boosts some~~ drags performance.
+    # ~~As it is added to the MSST engine later, earlier models need to have this manually hacked in~~.
+    # echo "Enabling 'sage_attention' and disabling 'flash_attn' in model config" && \
+    # sed -i \
+    #     -e '/^model:/a \ \ sage_attention: True' \
+    #     -e 's/flash_attn: true/flash_attn: false/' \
+    #     /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
+    # keep sed, attempting to remove it will break the build.
     apt-get purge -y --auto-remove curl && \
     apt-get clean && \
     # Clean up apt cache
@@ -89,12 +153,76 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip
 WORKDIR /app
 
 # python dependencies
-COPY --from=builder_submodule_wheels /app_build/combined_requirements.txt ./
+COPY --from=builder_submodule_wheels /app_build/part_*_wheels.txt ./
 
-#COPY --from=builder_submodule_wheels /all_wheels /tmp/all_wheels
-# use mount to avoid copying the large all_wheels directory (3.41GB) which cannot be later deleted.
-RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/tmp/all_wheels \
-    python3 -m pip install --no-cache-dir --no-index --find-links=/tmp/all_wheels -r combined_requirements.txt
+# Install dependencies in partitioned layers to optimize pull times
+# Each RUN command creates a new layer. We use conditional execution to dynamically
+# handle any number of partitions (up to 10) generated by the partition script.
+# Use mount to avoid [copying] the large all_wheels directory (3-6 GB) 
+# which cannot be later deleted.
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_1_wheels.txt ]; then \
+        echo "Installing partition 1..." && \
+        xargs -a part_1_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 1 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_2_wheels.txt ]; then \
+        echo "Installing partition 2..." && \
+        xargs -a part_2_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 2 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_3_wheels.txt ]; then \
+        echo "Installing partition 3..." && \
+        xargs -a part_3_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 3 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_4_wheels.txt ]; then \
+        echo "Installing partition 4..." && \
+        xargs -a part_4_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 4 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_5_wheels.txt ]; then \
+        echo "Installing partition 5..." && \
+        xargs -a part_5_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 5 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_6_wheels.txt ]; then \
+        echo "Installing partition 6..." && \
+        xargs -a part_6_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 6 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_7_wheels.txt ]; then \
+        echo "Installing partition 7..." && \
+        xargs -a part_7_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 7 found, skipping."; \
+    fi
+
+RUN --mount=type=bind,from=builder_submodule_wheels,source=/all_wheels,target=/all_wheels \
+    if [ -f part_8_wheels.txt ]; then \
+        echo "Installing partition 8..." && \
+        xargs -a part_8_wheels.txt python3 -m pip install --no-cache-dir --no-deps; \
+    else \
+        echo "No partition 8 found, skipping."; \
+    fi
 
 # Copy the rest of the application code, including the submodule contents
 COPY ./Music-Source-Separation-Training /app/Music-Source-Separation-Training
@@ -105,14 +233,6 @@ COPY ./runpod_adapter /app/runpod_adapter
 #COPY ./other_specific_file_or_dir /app/other_specific_file_or_dir
 COPY ./entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
-# Download and place the models into a specific directory within the image.
-# This increases image size but makes runtime faster.
-# Alternatively, download them from S3 in the entrypoint script.
-# Model download is now part of the apt-get install layer to optimize curl usage.
-# RUN mkdir -p /app/models
-# RUN curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.yaml https://raw.githubusercontent.com/TRvlvr/application_data/main/mdx_model_data/mdx_c_configs/model_bs_roformer_ep_368_sdr_12.9628.yaml && \
-#     curl -L -o /app/models/model_bs_roformer_ep_368_sdr_12.9628.ckpt https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_368_sdr_12.9628.ckpt
 
 # Define default paths and model type using environment variables.
 # These can be overridden by the Fargate Task Definition environment settings.
