@@ -8,25 +8,28 @@ class BotConfig:
     def __init__(self):
         # Bot基本配置
         self.bot_token: Optional[str] = os.getenv('TELEGRAM_BOT_TOKEN')
-        self.bot_username: str = os.getenv('TELEGRAM_BOT_USERNAME')
+        self.bot_username: str = os.getenv('TELEGRAM_BOT_USERNAME') # TODO: do we really need TG username?
         
         # API配置
         self.telegram_api_base = "https://api.telegram.org"
         
         # AWS配置
         self.aws_region = os.getenv('AWS_REGION', 'us-east-1')
-        self.dynamodb_table_name = os.getenv('DYNAMODB_TABLE_NAME', 'vocal-transcribe-tasks')
-        self.s3_bucket_name = os.getenv('S3_BUCKET_NAME', 'vocal-transcribe-files')
+        self.dynamodb_table_prefix = os.getenv('DYNAMODB_TABLE_PREFIX', 'transcribe-bot')
+        #self.s3_bucket_name = os.getenv('S3_BUCKET_NAME', 'vocal-transcribe-files') # not yet used
         
         # 消息配置
+        """ # not yet used
         self.max_file_size_mb = 50  # 最大文件大小限制（MB）
-        self.supported_languages = ['en', 'zh', 'ja', 'ko', 'es', 'fr', 'de', 'ru']
+        self.supported_languages = ['en', 'zh']
         self.default_language = 'en'
-        
+        """
         # 转录配置
-        self.whisper_model = 'large-v3'
-        self.max_duration_minutes = 60  # 最大音频时长限制（分钟）
-    
+        """ # not yet used, should move to config.yaml
+        self.whisper_model = 'large-v3' # try gemini-2.5-pro native
+        self.max_duration_minutes = 60  # 最大音频时长限制（分钟） 
+        """
+
     def get_bot_mention(self) -> str:
         """获取bot的@提及格式"""
         return f"@{self.bot_username}"

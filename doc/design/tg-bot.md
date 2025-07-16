@@ -20,17 +20,18 @@ Telegram Bot
     - replies a "start message"
   - sends a message including 1 or more audio file(s)
     - adds all audio files to the new transcription to-do list
-    - replies: a "transcription to-do list message"
+    - replies: a "<file_name> has been added, + transcription to-do list summary"
   - replies to a message with an audio file, with any msg, exmaple: '.'
     - adds the audio file to the new transcription to-do list
-    - replies: a "transcription to-do list message"
+    - replies: a "<file_name> has been added, + transcription to-do list summary"
   - /remove <int>
     - removes the audio file at index <int> from the new transcription to-do list
-    - replies: a "transcription to-do list message", with heading "removed: <audio_file_name>"
+    - replies: a "<file_name> has been removed, + transcription to-do list summary"
   - /help [msg, keyboard]
     - replies: a "help message"
-  - /mylist [msg, keyboard]
+  - /myTodoList [msg, keyboard]
     - replies: a "transcription to-do list message"
+  - <no /transcribe_now>: it must be launched via a "transcribe all now" button click attached to the "transcription to-do list message", means the to-do list must be inexplicitly seen by the user
   - /setlang [msg, keyboard]
     - replies: a "language selection message"
     
@@ -38,19 +39,19 @@ Telegram Bot
   - /start@bot
     - replies: = private chat /start
   - /add_music@bot replying to a msg containing 1 or more audio file(s)
-    - replies: = private chat "replies to a message with an audio file, with any msg"
     - add audio to:
       - transcription to-do list of the {user $\times$ group}
+    - replies: = private chat "replies to a message with an audio file, with any msg"
   - /remove@bot <int>: = private chat /remove <int>
-  - /mylist@bot
-    - replies: = private chat /mylist, but only shows the {user $\times$ group} list, shows the currently-added audio files, no historical transcription jobs.
+  - /myTodoList@bot
+    - replies: = private chat /myTodoList, but only shows the {user $\times$ group} list, shows the transcription to-do list message.
+  - <no /transcribe_now>: same as private chat
 
 - approval private chat/group:
-  - needs: admin account for every msg
+  - needs: admin or owner account for every msg
     - /send_approval_here
       - set the group as the approval chat group
     
-
 - no inline mode, any invoker should add this bot to their group first
 
 # internal data structure:
@@ -84,10 +85,29 @@ Telegram Bot
       - "cancel": click to checkout all audio files
       - list of index(int) of audio files, each index is a button, click to remove the audio file from the new transcription job and edit the "transcription to-do list message" to the new status
 
+- "transcription to-do list summary"
+  - content:
+    - text field: "transcription to-do list summary: <br> <files number> files"
+    - button field:
+      - myTodoList: click to show the "transcription to-do list message"
+      - remove this file: click to remove the audio file from the new transcription to-do list
+
 - transcription job message
   - content:
     - ref to the "transcription to-do list message"
     - text field: "transcription job {job_id} is started", progress: {progress_status}
+  - reply to: the "transcription to-do list message"
+  - update: regularly update the progress until finished
+  - self-destruct: once finished, self-destruct.
+
+
+- transcription job outcome message(s)
+  - one message for each media file
+  - content: the cc of an audio file
+    - media field: processed vocal stem file
+    - text field: 
+      - ref to the transcription to-do list message
+      - inline cc txt (typically an LRC)
 
 - transcription job statistics message
   - content:
@@ -96,13 +116,6 @@ Telegram Bot
       - record of the transcription job: audio file names
       - optional: statistics of the transcription job: GPU seconds, audio seconds, speed-factor.
     - once finishes, delete the ref msg and update result
-
-- transcription job outcome message(s)
-  - one message for each audio file
-  - content: the cc of an audio file
-    - text field: 
-      - ref to the transcription job statistics message
-      - inline cc txt (typically an LRC)
 
 - "approval message"
   - happens:
@@ -126,3 +139,23 @@ When media file is to be [add]ed, the bot will:
   - for each file, the bot will validate the file's size and duration, <where to store limit config?> document file type doesn't have duration, so only file size will be validated.
   - if the file is not valid, the bot will reply to the user with the error message
   - if the file is valid, the bot will add the file to the new transcription to-do list
+
+# time_sequence:
+
+## user happy path:
+```txt
+# in a private chat:
+user: /start
+[add file(s): may happen multiple times]
+user: sends a message with 1 or more audio files | replies to a message that contains 1 or more audio files | forwards a message that contains 1 or more audio files
+bot: <file_name(s)> has been added, + transcription to-do list summary (has a "transcribe todo list" button attached)
+[check todo list]
+user: /myTodoList
+bot: transcription to-do list message
+[start transcription]
+user: click "transcribe todo list" button
+bot: reply to the "transcription to-do list message" with a "transcription job message", regularly update the progress until finished, then self-destruct
+bot: sends the transcription job outcome message(s) to the user, each media a (groupped) message, containing: vocal-stem, lyrics
+bot: sends the transcription job statistics message to the user
+[end]
+```

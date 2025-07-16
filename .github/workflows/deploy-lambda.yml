@@ -68,13 +68,48 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # Specific for Lambda deployment
           aws-region: ${{ secrets.AWS_REGION }} # e.g., us-east-1, ap-southeast-1
 
+      - name: Initialize/Update DynamoDB Tables
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          DYNAMODB_TABLE_PREFIX: ${{ vars.DYNAMODB_TABLE_PREFIX }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
+        run: |
+          echo "Installing dependencies for setup script..."
+          pip install -r bot-src/requirements.txt
+          
+          echo "Running database setup script to initialize tables..."
+          python bot-src/setup_database.py --init-only
+
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://lambda_function.zip \
             --publish # Optional: to publish a new version
-          echo "Lambda function deployed successfully!"
+          echo "Lambda function code deployed successfully!"
+
+      - name: Update Lambda Configuration
+        run: |
+          echo "Updating Lambda environment variables..."
+          # Prepare environment variables in the format required by AWS CLI
+          ENV_VARS_JSON=$(cat <<EOF
+          {
+            "Variables": {
+              "TELEGRAM_BOT_TOKEN": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
+              "TELEGRAM_BOT_USERNAME": "${{ secrets.TELEGRAM_BOT_USERNAME }}",
+              "AWS_REGION": "${{ secrets.AWS_REGION }}",
+              "DYNAMODB_TABLE_PREFIX": "${{ vars.DYNAMODB_TABLE_PREFIX }}",
+              "S3_BUCKET_NAME": "${{ vars.S3_BUCKET_NAME }}"
+            }
+          }
+          EOF
+          )
+          
+          aws lambda update-function-configuration \
+            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+            --environment "$ENV_VARS_JSON"
+          echo "Lambda function configuration updated successfully!"
 
       - name: Update Telegram Bot Commands
         if: success()

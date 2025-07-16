@@ -1,1 +1,3 @@
-requests==2.31.0  # Or any recent stable version 
+requests  # Or any recent stable version 
+boto3  # AWS SDK for Python
+botocore  # AWS SDK core library 
