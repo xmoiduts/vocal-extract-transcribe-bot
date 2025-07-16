@@ -11,9 +11,9 @@ class DatabaseManager:
     
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb', region_name=config.aws_region)
-        self.users_table = self.dynamodb.Table(f"{config.dynamodb_table_name}-users")
-        self.groups_table = self.dynamodb.Table(f"{config.dynamodb_table_name}-groups")
-        self.jobs_table = self.dynamodb.Table(f"{config.dynamodb_table_name}-transcription-jobs")
+        self.users_table = self.dynamodb.Table(f"{config.dynamodb_table_prefix}-users")
+        self.groups_table = self.dynamodb.Table(f"{config.dynamodb_table_prefix}-groups")
+        self.jobs_table = self.dynamodb.Table(f"{config.dynamodb_table_prefix}-transcription-jobs")
     
     # ==================== Users表操作 ====================
     

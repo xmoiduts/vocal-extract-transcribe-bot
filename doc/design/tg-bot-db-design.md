@@ -20,7 +20,7 @@ Telegram Bot Database Design
 - `user_id` (String): 用户ID，主键
 - `status` (String): 用户状态，可选值：
   - `'owner'`: 机器人所有者，拥有所有权限，不限量，使用高级资源池
-  - `'admin'`: 管理员，拥有所有权限，不限量，使用高级资源池
+  - `'admin'`: 管理员，拥有所有权限{不能增删改其他管理员和owner}，不限量，使用高级资源池
   - `'premium-user'`: 高级用户，可以使用转录功能，不限量，使用高级资源池
   - `'standard-user'`: 普通用户，可以使用转录功能，限速限量，不付费情况下使用免费资源池
   - `'blocked'`: 被封禁用户，无法使用任何功能
@@ -100,12 +100,13 @@ Telegram Bot Database Design
     }
   ]
   ```
-- `job_id` (String, 可选): 当用户点击"开始转录"后生成的唯一任务ID
+- `job_id` (String, 可选): 当用户发起"开始转录"后生成的唯一任务ID
 - `message_id` (Number, 可选): 转录任务消息的ID，用于更新进度
 - `statistics` (Map, 可选): 任务完成后存储的统计信息，例如：
   ```json
   {
     "gpu_seconds": 120,
+    "gpu_backend": "[AWS/RunPod]"
     "audio_seconds": 300,
     "speed_factor": 2.5,
     "processing_time": 180
@@ -115,7 +116,10 @@ Telegram Bot Database Design
   ```json
   [
     {
-      "file_id": "BAADBAADrwADBREAAYag2XT...",
+      "this_message_id": 1234567890, // 回复给用户的本消息的message_id
+      "reply_to_message_id": 1234567890, // 回复表中的message_id
+      "source_file_id": "BAADBAADrwADBREAAYag2XT...",
+      "vocal_stem_file"
       "transcription": "歌词内容...",
       "format": "lrc",
       "language": "zh"

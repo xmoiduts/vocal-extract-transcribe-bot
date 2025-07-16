@@ -37,7 +37,7 @@
 ```bash
 # 设置环境变量
 export AWS_REGION=us-east-1
-export DYNAMODB_TABLE_NAME=vocal-transcribe-prod
+export DYNAMODB_TABLE_PREFIX=vocal-transcriber-db-dev
 export TELEGRAM_BOT_TOKEN=your_bot_token
 export TELEGRAM_BOT_USERNAME=your_bot_username
 
@@ -219,7 +219,7 @@ resource "aws_dynamodb_table" "transcription_jobs" {
 必需的环境变量：
 
 - `AWS_REGION` - AWS区域（默认：us-east-1）
-- `DYNAMODB_TABLE_NAME` - 表名前缀（默认：vocal-transcribe-tasks）
+- `DYNAMODB_TABLE_PREFIX` - 表名前缀（默认：vocal-transcriber-db-dev）
 - `TELEGRAM_BOT_TOKEN` - Telegram机器人令牌
 - `TELEGRAM_BOT_USERNAME` - Telegram机器人用户名
 
