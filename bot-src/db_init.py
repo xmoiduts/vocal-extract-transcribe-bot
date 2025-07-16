@@ -162,23 +162,42 @@ class DynamoDBInitializer:
                         }
                     }
                 ],
-                BillingMode='PAY_PER_REQUEST',
-                # 设置TTL，自动删除过期的已完成任务
-                TimeToLiveSpecification={
-                    'AttributeName': 'ttl',
-                    'Enabled': True
-                }
+                BillingMode='PAY_PER_REQUEST'
             )
             
+            # 等待表创建完成
             waiter = self.dynamodb.get_waiter('table_exists')
             waiter.wait(TableName=table_name)
             
             print(f"✅ TranscriptionJobs table '{table_name}' created successfully")
+
+            # 为表启用TTL
+            self.dynamodb.update_time_to_live(
+                TableName=table_name,
+                TimeToLiveSpecification={
+                    'Enabled': True,
+                    'AttributeName': 'ttl'
+                }
+            )
+            print(f"✅ Enabled TTL on table '{table_name}'")
+
             return True
             
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceInUseException':
                 print(f"⚠️ TranscriptionJobs table '{table_name}' already exists")
+                # 如果表已存在，也尝试更新TTL设置
+                try:
+                    self.dynamodb.update_time_to_live(
+                        TableName=table_name,
+                        TimeToLiveSpecification={
+                            'Enabled': True,
+                            'AttributeName': 'ttl'
+                        }
+                    )
+                    print(f"✅ Ensured TTL is enabled on existing table '{table_name}'")
+                except ClientError as ttl_e:
+                    print(f"❌ Error enabling TTL on existing table: {ttl_e}")
                 return True
             else:
                 print(f"❌ Error creating TranscriptionJobs table: {e}")
