@@ -107,7 +107,7 @@ jobs:
           )
           
           aws lambda update-function-configuration \
-            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --environment "$ENV_VARS_JSON"
           echo "Lambda function configuration updated successfully!"
 
