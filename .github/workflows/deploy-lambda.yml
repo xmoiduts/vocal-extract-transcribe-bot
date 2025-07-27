@@ -89,6 +89,11 @@ jobs:
             --publish # Optional: to publish a new version
           echo "Lambda function code deployed successfully!"
 
+          echo "Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          echo "Function update completed."
+
       - name: Update Lambda Configuration
         run: |
           echo "Updating Lambda environment variables..."
