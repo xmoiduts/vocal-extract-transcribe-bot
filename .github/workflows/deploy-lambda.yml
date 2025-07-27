@@ -103,7 +103,6 @@ jobs:
             "Variables": {
               "TELEGRAM_BOT_TOKEN": "${{ secrets.TELEGRAM_BOT_TOKEN }}",
               "TELEGRAM_BOT_USERNAME": "${{ secrets.TELEGRAM_BOT_USERNAME }}",
-              "AWS_REGION": "${{ secrets.AWS_REGION }}",
               "DYNAMODB_TABLE_PREFIX": "${{ vars.DYNAMODB_TABLE_PREFIX }}",
               "S3_BUCKET_NAME": "${{ vars.S3_BUCKET_NAME }}"
             }
